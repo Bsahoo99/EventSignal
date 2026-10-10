@@ -33,3 +33,26 @@ One evidence-attribution violation: a company name could match the suffix of ano
 Two evidence-attribution findings: company-name suffixes could supply the wrong role, and multi-company quotes could supply another company's skill topics. **Fixed:** validate roles against complete source entries, and restrict hiring-partner skill evidence to the validated role. Original reproductions and the spaced-name variant no longer create false role or skill claims. Reviewer recheck: zero unresolved findings. No scope-creep findings.
 
 **Fix review totals: Standards 1 found / 1 fixed; Spec 2 found / 2 fixed. Zero unresolved findings on either axis.** Final validation: 34 automated tests, TypeScript, public build, and formatting checks; live owner UI and bounded source/provider checks documented in the fix record.
+
+
+# Company discovery review — October 10, 2026
+
+Baseline: `8ada36d`; first implementation: `f6fa9a9`. Spec: [company-discovery.md](company-discovery.md). Both axes reviewed independently and rechecked corrections.
+
+## Standards
+
+1. An unrelated subdomain could satisfy the company brand check and promote an opening. **Fixed:** public-suffix-aware registrable-domain matching; private hosting suffixes are excluded from automatic discovery. A controlled application regression rejects both unrelated subdomains and private hosting while accepting a matching .co.uk domain.
+2. A career-read research limit appeared as an unreadable page. **Fixed:** preserve the limit category and report the traversal cap explicitly. Confirmed with an application regression.
+
+Reviewer recheck: zero unresolved findings; no actionable baseline smells. Original worst issue: unrelated subdomains being accepted as official company domains.
+
+## Spec
+
+1. Substring context matching accepted “reagents” as event evidence for “agents.” **Fixed:** normalize both sides and compare complete words. Regression confirms the unrelated company stays unverified.
+2. Careers-stage limits were misreported as unreadable sources. **Fixed:** preserve research-limited status; existing verified openings retain partial-research warnings.
+
+Reviewer recheck: zero unresolved findings; no scope-creep findings. Original worst issue: false event-context corroboration promoting the wrong company.
+
+**Discovery review totals: Standards 2 found / 2 fixed; Spec 2 found / 2 fixed. Zero unresolved findings on either axis.**
+
+Both reviewers additionally cleared the bounded HTML allowance change after the live source checks. Final checks: 44 automated tests, TypeScript, public production build, formatting, and diff checks passed.

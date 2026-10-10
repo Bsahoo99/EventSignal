@@ -1,4 +1,5 @@
 import type { Recommendation } from '../contracts';
+import { parse } from 'tldts';
 import {
   validateDestination,
   type PageReader,
@@ -21,36 +22,42 @@ function identityMatches(company: string, page: SourcePage) {
   return names.some((name) => normalize(name) === normalize(company));
 }
 function brandMatches(company: string, url: string) {
-  const brand = normalize(hostname(url).split('.')[0]);
+  const domain = parse(hostname(url), { allowPrivateDomains: true });
+  if (!domain.isIcann || domain.isPrivate || !domain.domainWithoutSuffix)
+    return false;
+  const brand = normalize(domain.domainWithoutSuffix);
   return (
     brand === normalize(company) ||
     (/\sAI$/i.test(company) &&
       brand === normalize(company.replace(/\sAI$/i, '')))
   );
 }
-function contextMatches(rec: Recommendation, page: SourcePage) {
-  const terms = (rec.eventRole ? [rec.eventRole] : (rec.topics ?? []))
-    .join(' ')
+const words = (text: string) =>
+  text
     .toLowerCase()
     .replace(/\bevals?\b/g, 'evaluation')
     .replace(/\bagents\b/g, 'agent')
-    .split(/[^a-z0-9]+/)
-    .filter(
-      (t) =>
-        t.length >= 4 &&
-        ![
-          'senior',
-          'engineer',
-          'manager',
-          'founding',
-          'global',
-          'solution',
-          'designer',
-          'product',
-          'marketing',
-        ].includes(t),
-    );
-  return terms.some((term) => page.text.toLowerCase().includes(term));
+    .split(/[^a-z0-9]+/);
+function contextMatches(rec: Recommendation, page: SourcePage) {
+  const terms = words(
+    (rec.eventRole ? [rec.eventRole] : (rec.topics ?? [])).join(' '),
+  ).filter(
+    (t) =>
+      t.length >= 4 &&
+      ![
+        'senior',
+        'engineer',
+        'manager',
+        'founding',
+        'global',
+        'solution',
+        'designer',
+        'product',
+        'marketing',
+      ].includes(t),
+  );
+  const pageWords = new Set(words(page.text));
+  return terms.some((term) => pageWords.has(term));
 }
 export async function discoverCompany(
   rec: Recommendation,

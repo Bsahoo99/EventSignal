@@ -2,6 +2,7 @@ import { lookup } from 'node:dns/promises';
 import { request } from 'node:https';
 import ipaddr from 'ipaddr.js';
 import * as cheerio from 'cheerio';
+const MAX_PAGE_BYTES = 1_000_000;
 export type SourcePage = {
   url: string;
   title?: string;
@@ -87,8 +88,8 @@ async function fetchPinned({ url, address }: Destination, timeout: number) {
         const chunks: Buffer[] = [];
         res.on('data', (chunk: Buffer) => {
           bytes += chunk.length;
-          if (bytes > 250_000) {
-            req.destroy(new Error('Page exceeds 250 KB.'));
+          if (bytes > MAX_PAGE_BYTES) {
+            req.destroy(new Error('Page exceeds 1 MB.'));
             return;
           }
           chunks.push(chunk);
@@ -199,6 +200,8 @@ export function createPageReader(
         destination,
         Math.min(10_000, deadline - Date.now()),
       );
+      if (Buffer.byteLength(response.body, 'utf8') > MAX_PAGE_BYTES)
+        throw new Error('Page exceeds 1 MB.');
       if (
         response.status >= 300 &&
         response.status < 400 &&

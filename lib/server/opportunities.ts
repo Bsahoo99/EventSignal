@@ -2,7 +2,11 @@ import { z } from 'zod';
 import * as cheerio from 'cheerio';
 import type { Profile, Recommendation, Evidence } from '../contracts';
 import type { SourcePage, PageReader } from './sources';
-import { discoverCompany, type Searcher } from './discovery';
+import {
+  discoverCompany,
+  ResearchLimitError,
+  type Searcher,
+} from './discovery';
 const jobSchema = z.object({
   title: z.string().min(1).max(200),
   hiringOrganization: z.object({ name: z.string() }),
@@ -116,12 +120,17 @@ export async function researchOpenings(
     const pages = [home];
     const visited = new Set([home.url]);
     let incomplete = false;
-    for (let index = 0; index < pages.length && visited.size < 4; index++) {
+    let limited = false;
+    for (let index = 0; index < pages.length; index++) {
       const careers = pages[index].links.filter((l) =>
         trustedCareerLink(l, host(home.url)),
       );
       for (const career of careers) {
-        if (visited.has(career.url) || visited.size >= 4) continue;
+        if (visited.has(career.url)) continue;
+        if (visited.size >= 4 || limited) {
+          limited = true;
+          continue;
+        }
         visited.add(career.url);
         try {
           const page = await read(career.url);
@@ -130,8 +139,9 @@ export async function researchOpenings(
               'Careers source redirected outside the established source domain.',
             );
           pages.push(page);
-        } catch {
-          incomplete = true;
+        } catch (error) {
+          if (error instanceof ResearchLimitError) limited = true;
+          else incomplete = true;
         }
       }
     }
@@ -232,9 +242,11 @@ export async function researchOpenings(
             evidence: [...rec.evidence, ...evidence],
           },
           evidence,
-          warning: incomplete
-            ? `${company}: some detail pages were unreadable; verification is limited to the recorded fields.`
-            : undefined,
+          warning: limited
+            ? `${company}: research stopped at the time or page limit; verification is limited to the recorded fields.`
+            : incomplete
+              ? `${company}: some detail pages were unreadable; verification is limited to the recorded fields.`
+              : undefined,
         };
       }
     }
@@ -242,10 +254,16 @@ export async function researchOpenings(
       recommendation: {
         ...rec,
         research: research(
-          incomplete ? 'careers-unreadable' : 'no-matching-opening',
-          incomplete
-            ? 'Some careers pages could not be read. Open the company website to check current roles manually.'
-            : 'Company pages checked; no supported matching opening found in this limited search. Check the website for additional roles.',
+          limited
+            ? 'research-limited'
+            : incomplete
+              ? 'careers-unreadable'
+              : 'no-matching-opening',
+          limited
+            ? 'Research stopped at the time or page limit. Open the company website to check additional roles manually.'
+            : incomplete
+              ? 'Some careers pages could not be read. Open the company website to check current roles manually.'
+              : 'Company pages checked; no supported matching opening found in this limited search. Check the website for additional roles.',
         ),
         evidence: [...rec.evidence, ...evidence],
       },

@@ -7,6 +7,101 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SearchCache, braveSearch } from '../lib/server/search';
+import { ResearchLimitError } from '../lib/server/discovery';
+test('discovery matches the registered company domain, not an unrelated subdomain', async () => {
+  for (const [url, expected] of [
+    ['https://acme.unrelated-directory.com/', 'exploratory'],
+    ['https://acme.github.io/', 'exploratory'],
+    ['https://acme.co.uk/', 'verified-opening'],
+  ] as const) {
+    const result = await analyze(
+      { profile: initialProfile, event: { kind: 'text', text: eventText } },
+      createTestDependencies({
+        search: async () => [{ title: 'Acme', url, description: 'agents' }],
+        readPage: async (url) => ({
+          url,
+          title: 'Acme',
+          text: 'Acme builds agents. Applied AI Engineer.',
+          links: [],
+          jobs: [
+            {
+              title: 'Applied AI Engineer',
+              hiringOrganization: { name: 'Acme' },
+            },
+          ],
+        }),
+      }),
+    );
+    assert.equal(result.ok, true);
+    if (result.ok)
+      assert.equal(
+        result.brief.recommendations[0].opportunity.kind,
+        expected,
+        url,
+      );
+  }
+});
+test('company context requires whole words rather than unrelated substrings', async () => {
+  const result = await analyze(
+    { profile: initialProfile, event: { kind: 'text', text: eventText } },
+    createTestDependencies({
+      search: async () => [
+        { title: 'Acme', url: 'https://acme.com', description: 'agents' },
+      ],
+      readPage: async (url) => ({
+        url,
+        title: 'Acme',
+        text: 'Acme manufactures chemical reagents. Applied AI Engineer.',
+        links: [],
+        jobs: [
+          {
+            title: 'Applied AI Engineer',
+            hiringOrganization: { name: 'Acme' },
+          },
+        ],
+      }),
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(
+      result.brief.recommendations[0].research?.status,
+      'site-ambiguous',
+    );
+    assert.equal(
+      result.brief.recommendations[0].opportunity.kind,
+      'exploratory',
+    );
+  }
+});
+test('a careers retrieval limit is reported as research-limited', async () => {
+  const result = await analyze(
+    {
+      profile: initialProfile,
+      event: { kind: 'text', text: eventText },
+      companyWebsites: [{ company: 'Acme', url: 'https://acme.com/' }],
+    },
+    createTestDependencies({
+      readPage: async (url) => {
+        if (url.endsWith('/careers'))
+          throw new ResearchLimitError('Page budget exhausted');
+        return {
+          url,
+          title: 'Acme',
+          text: 'Acme builds agents.',
+          links: [{ label: 'Careers', url: 'https://acme.com/careers' }],
+          jobs: [],
+        };
+      },
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (result.ok)
+    assert.equal(
+      result.brief.recommendations[0].research?.status,
+      'research-limited',
+    );
+});
 test('the existing budget cap stops discovery and expired searches are charged again', async () => {
   const deps = createTestDependencies({ search: async () => [] });
   for (let i = 0; i < 79; i++) deps.budget.settle(deps.budget.reserve());

@@ -24,12 +24,12 @@ The browser suite checks desktop/mobile public briefs, disclosures and evidence 
 
 - **Provider access and integration: confirmed October 10, 2026.** After the user configured the key locally, the official model endpoint confirmed account access. One synthetic event was submitted through the real owner HTTP API. Structured output was accepted, one exploratory recommendation returned, and the durable ledger reconciled the request to an estimated $0.00025. See [provider-smoke.json](evaluation/provider-smoke.json). This establishes integration, not real-event matching quality.
 - **Real-source end-to-end quality: limited checks completed October 10.** The Heavyweights event was analyzed through the owner UI with Gemini and now returns Baseten, Ankur Goyal, and Corinne Riley as exploratory connections. A captured real-provider response for the Talent Hunt was replayed through the repaired coordinator and returns five hiring partners with event-listed roles. These checks exposed and repaired narrow relationship keywords, terminology mismatches, and invisible-formatting rejection. They do not establish general model quality or real job-verification quality. See [event-relationship-fix.md](event-relationship-fix.md).
-- Discovery is intentionally narrower than a search engine: linked company domains only. Automatic job verification supports readable JSON-LD plus visible title, not arbitrary career-page formats. Company aliases, complex identity relationships, semantic contradictions, and eligibility decisions need manual source review.
+- Discovery is bounded to event links, owner-supplied sites, or up to five Brave searches with identity checks. Automatic job verification supports readable JSON-LD plus visible title, not arbitrary career-page formats. Company aliases, complex identity relationships, semantic contradictions, and eligibility decisions need manual source review.
 - The initial profile contains only the selected summary in the PRD. Original resume/project records were unavailable in this workspace; enter exact project evidence in the editor before relying on personalized introductions.
 - The $2 validation reserve is not enabled. The development ceiling stays $8. No total account-spend guarantee is made.
 - Hosting is unconfigured. A production build is available; the site has not been published.
 
-The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Search remains disabled. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
+The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Gemini grounding remains disabled; optional bounded Brave discovery is implemented, with live Brave validation pending its key. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
 
 ## Final verification record
 
@@ -40,3 +40,14 @@ The initial live synthetic-input run recorded **$0.00025**. Subsequent user even
 - Public production access smoke test: `/api/analyze` returned **403** and `/owner` returned **404** even with owner mode and a valid-length owner token supplied at runtime.
 - Desktop (1280 px) and mobile (390 px) screenshots were inspected; no horizontal overflow or obscured primary controls was observed. Keyboard disclosure activation is covered in browser checks.
 - Separate Standards and Spec reviews each found two issues; all four were fixed and independently rechecked. See REVIEW.md.
+
+
+## Company discovery validation — October 10, 2026
+
+- Added missing-link discovery, manual company website input, per-company research statuses, persistent 24-hour search caching, and search charges in the existing $8 ledger.
+- Application regressions cover verified official pages versus snippets, name/domain/context ambiguity (including unrelated subdomains and “reagents”), manual fallback, missing/failed search, cache freshness/expiry, and budget/research limits. Fixture runs incur no real provider charges.
+- Live safe-reader checks initially rejected Cresta and Braintrust above 250 KB. Both now return readable source text with the bounded 1 MB HTML allowance; the 20,000-character extraction cap and address/redirect/time protections remain. See [company-source-checks.json](evaluation/company-source-checks.json). These source checks made no model/search calls and do not establish verified job openings.
+- Live Brave search remains pending: BRAVE_SEARCH_API_KEY was absent at the final configuration check. The user agreed to add it. Controlled provider-adapter tests are not a live search validation.
+- New UI browser inspection was blocked by browser URL policy. Earlier browser-suite results above apply to the earlier implementation, not this new field/status display. No alternate browser surface was used to bypass the block.
+
+Final discovery verification: **44 automated tests passed**, TypeScript passed, public production build passed, formatting and diff checks passed. Independent Standards and Spec rechecks each reported zero unresolved findings.

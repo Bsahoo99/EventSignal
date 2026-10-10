@@ -55,3 +55,26 @@ test('redirect to a private address is blocked even after a safe initial request
   await assert.rejects(read('https://safe.example'));
   assert.deepEqual(visited, ['safe.example']);
 });
+test('public pages allow larger HTML shells but reject bodies above one megabyte', async () => {
+  const resolver = async () => [{ address: '93.184.216.34', family: 4 }];
+  const body =
+    '<html><body>Readable official company content.</body><!--' +
+    ' '.repeat(300_000) +
+    '--></html>';
+  const read = createPageReader(resolver, async () => ({
+    body,
+    status: 200,
+    type: 'text/html',
+  }));
+  const page = await read('https://acme.com');
+  assert.match(page.text, /Readable official company content/);
+  const oversized = createPageReader(resolver, async () => ({
+    body: body + ' '.repeat(700_000),
+    status: 200,
+    type: 'text/html',
+  }));
+  await assert.rejects(
+    () => oversized('https://acme.com'),
+    /Page exceeds 1 MB/,
+  );
+});

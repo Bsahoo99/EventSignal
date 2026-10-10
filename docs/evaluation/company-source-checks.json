@@ -1,0 +1,25 @@
+{
+  "providerCalls": 0,
+  "checks": [
+    {
+      "url": "https://cresta.com/",
+      "finalUrl": "https://cresta.com/",
+      "title": "AI Agents for Every Customer Conversation | Cresta",
+      "siteNames": [],
+      "characters": 16829,
+      "status": "readable",
+      "checkedAt": "2026-10-10T21:24:21.876Z"
+    },
+    {
+      "url": "https://www.braintrust.dev/",
+      "finalUrl": "https://www.braintrust.dev/",
+      "title": "Braintrust - The active observability platform for agents",
+      "siteNames": [
+        "Braintrust"
+      ],
+      "characters": 7259,
+      "status": "readable",
+      "checkedAt": "2026-10-10T21:24:22.302Z"
+    }
+  ]
+}
