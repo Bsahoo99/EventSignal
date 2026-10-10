@@ -130,3 +130,88 @@ test('empty, budget and provider states give next steps', async ({ page }) => {
       .filter({ hasText: 'model did not return usable evidence' }),
   ).toBeVisible();
 });
+
+test('verified and exploratory results remain distinct and official evidence opens', async ({
+  page,
+  context,
+}) => {
+  const { analyze } = await import('../../lib/server/analysis');
+  const { createTestDependencies, extraction, eventText } =
+    await import('../fixtures');
+  const beta = {
+    ...extraction.entities[0],
+    name: 'Ben Fox',
+    company: 'Beta',
+    quote: 'Speaker Ben Fox from Beta presents agents.',
+    topics: ['agents'],
+  };
+  const pages = [
+    {
+      url: 'https://events.example.org',
+      text: eventText + ' ' + beta.quote,
+      links: [{ label: 'Acme', url: 'https://acme.com' }],
+      jobs: [],
+    },
+    {
+      url: 'https://acme.com',
+      text: 'Acme builds agents.',
+      links: [{ label: 'Careers', url: 'https://acme.com/careers' }],
+      jobs: [],
+    },
+    {
+      url: 'https://acme.com/careers',
+      text: 'Applied AI Engineer: accepting applications.',
+      links: [],
+      jobs: [
+        {
+          '@type': 'JobPosting',
+          title: 'Applied AI Engineer',
+          hiringOrganization: { name: 'Acme' },
+          validThrough: '2027-01-01',
+        },
+      ],
+    },
+  ];
+  await page.route('**/api/analyze', async (route) => {
+    const deps = createTestDependencies({
+      extract: async () => ({
+        data: { ...extraction, entities: [beta, extraction.entities[0]] },
+      }),
+      readPage: async (url) => {
+        const source = pages.find((p) => p.url === url);
+        if (!source) throw new Error('missing');
+        return source;
+      },
+    });
+    await route.fulfill({
+      json: await analyze(route.request().postDataJSON(), deps),
+    });
+  });
+  await context.route('https://acme.com/careers', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<h1>Official source fixture</h1>',
+    }),
+  );
+  await page.goto('/owner');
+  await page
+    .getByLabel('Owner access token')
+    .fill('local-test-token-at-least-32-characters');
+  await page.getByLabel('Event input').selectOption('url');
+  await page.getByLabel('Public event URL').fill('https://events.example.org');
+  await page.getByRole('button', { name: 'Analyze event' }).click();
+  await expect(
+    page.getByText('Verified opening snapshot', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Exploratory connection', { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel('Prepare a conversation').first().click();
+  const opened = context.waitForEvent('page');
+  await page.getByRole('link', { name: 'Read job evidence' }).click();
+  const source = await opened;
+  await expect(
+    source.getByRole('heading', { name: 'Official source fixture' }),
+  ).toBeVisible();
+  await source.close();
+});

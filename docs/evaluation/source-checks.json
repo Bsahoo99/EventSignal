@@ -2,7 +2,7 @@
   {
     "name": "Named-speaker conference announcement",
     "url": "https://blog.langchain.dev/introducing-interrupt-langchain-conference/",
-    "checkedAt": "2026-10-10T06:40:31.444Z",
+    "checkedAt": "2026-10-10T06:41:39.152Z",
     "status": "readable",
     "finalUrl": "https://www.langchain.com/blog/introducing-interrupt-langchain-conference",
     "characters": 5007,
@@ -12,21 +12,21 @@
     "costUsd": 0
   },
   {
-    "name": "Sparse non-event negative control",
-    "url": "https://example.com/",
-    "checkedAt": "2026-10-10T06:40:31.501Z",
+    "name": "Sparse event listing",
+    "url": "https://www.python.org/events/python-events/2118/",
+    "checkedAt": "2026-10-10T06:41:39.336Z",
     "status": "readable",
-    "finalUrl": "https://example.com/",
-    "characters": 156,
-    "excerpt": "This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.",
-    "links": 0,
+    "finalUrl": "https://www.python.org/events/python-events/2118/",
+    "characters": 2384,
+    "excerpt": "Notice: This page displays a fallback because interactive scripts did not run. Possible causes include disabled JavaScript or failure to load scripts or stylesheets. Skip to content ▼ Close Python PSF",
+    "links": 60,
     "providerRun": "not run — no credentials; quality validation pending",
     "costUsd": 0
   },
   {
     "name": "Event listing with possible rendering/access limits",
     "url": "https://lu.ma/sf",
-    "checkedAt": "2026-10-10T06:40:31.864Z",
+    "checkedAt": "2026-10-10T06:41:39.613Z",
     "status": "retrieval limitation",
     "limitation": "Page exceeds 250 KB.",
     "providerRun": "not run",

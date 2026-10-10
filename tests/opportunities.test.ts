@@ -184,3 +184,76 @@ test('contradictory closed detail overrides an older listing on the careers page
       'exploratory',
     );
 });
+
+test('ordinary filled and now-closed wording excludes stale structured listings', async () => {
+  for (const text of [
+    'Applied AI Engineer — this position has been filled.',
+    'Applied AI Engineer. Applications are now closed.',
+  ]) {
+    const result = await analyze(
+      { profile: initialProfile, event: { kind: 'url', url: event.url } },
+      createTestDependencies({
+        readPage: pagesReader([event, company, { ...jobs, text }]),
+      }),
+    );
+    assert.equal(result.ok, true);
+    if (result.ok)
+      assert.equal(
+        result.brief.recommendations[0].opportunity.kind,
+        'exploratory',
+      );
+  }
+});
+test('a closed unrelated position does not suppress an open matching role', async () => {
+  const result = await analyze(
+    { profile: initialProfile, event: { kind: 'url', url: event.url } },
+    createTestDependencies({
+      readPage: pagesReader([
+        event,
+        company,
+        {
+          ...jobs,
+          text: 'Applied AI Engineer — accepting applications. Product Designer — position closed.',
+        },
+      ]),
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (result.ok)
+    assert.equal(
+      result.brief.recommendations[0].opportunity.kind,
+      'verified-opening',
+    );
+});
+
+test('verified matching roles rank ahead of earlier exploratory connections without padding', async () => {
+  const { extraction } = await import('./fixtures');
+  const beta = {
+    ...extraction.entities[0],
+    name: 'Ben Fox',
+    company: 'Beta',
+    quote: 'Speaker Ben Fox from Beta presents agents.',
+    topics: ['agents'],
+  };
+  const source = { ...event, text: beta.quote + ' ' + event.text };
+  const result = await analyze(
+    { profile: initialProfile, event: { kind: 'url', url: event.url } },
+    createTestDependencies({
+      extract: async () => ({
+        data: { ...extraction, entities: [beta, extraction.entities[0]] },
+      }),
+      readPage: pagesReader([source, company, jobs]),
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.deepEqual(
+      result.brief.recommendations.map((rec) => rec.name),
+      ['Ada Chen', 'Ben Fox'],
+    );
+    assert.equal(
+      result.brief.recommendations[1].opportunity.kind,
+      'exploratory',
+    );
+  }
+});

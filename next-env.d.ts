@@ -1,6 +1,6 @@
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
-import "./.next-owner-test/dev/types/routes.d.ts";
+import "./.next/types/routes.d.ts";
 import "./.next-owner-test/dev/types/root-params.d.ts";
 
 // NOTE: This file should not be edited

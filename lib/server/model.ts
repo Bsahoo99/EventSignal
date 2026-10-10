@@ -81,14 +81,21 @@ export function geminiExtractor(key: string): Extractor {
         .join(''),
     );
     const usage = raw.usageMetadata;
+    const completeUsage =
+      usage &&
+      [
+        usage.promptTokenCount,
+        usage.totalTokenCount,
+        usage.candidatesTokenCount,
+      ].every((value) => Number.isSafeInteger(value) && value >= 0) &&
+      usage.totalTokenCount >=
+        usage.promptTokenCount + usage.candidatesTokenCount;
     return {
       data,
-      usage: usage
+      usage: completeUsage
         ? {
             inputTokens: usage.promptTokenCount,
-            outputTokens:
-              (usage.candidatesTokenCount ?? 0) +
-              (usage.thoughtsTokenCount ?? 0),
+            outputTokens: usage.totalTokenCount - usage.promptTokenCount,
           }
         : undefined,
     };

@@ -166,6 +166,7 @@ export async function analyze(
       id: `recommendation-${index}`,
       name: entity.name,
       company: entity.company,
+      relationshipKind: entity.relationship,
       relationship: `Listed ${entity.relationship.replaceAll('-', ' ')}`,
       modality,
       opportunity: { kind: 'exploratory' },

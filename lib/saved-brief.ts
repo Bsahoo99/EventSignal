@@ -45,6 +45,7 @@ export const savedBrief: Brief = {
       id: 'harrison-chase',
       name: 'Harrison Chase',
       company: '',
+      relationshipKind: 'speaker',
       relationship: 'Recorded speaker on reliable enterprise agents',
       modality: 'unknown',
       opportunity: { kind: 'exploratory' },

@@ -30,3 +30,13 @@ The browser suite checks desktop/mobile public briefs, disclosures and evidence 
 - Hosting is unconfigured. A production build is available; the site has not been published.
 
 Observed application model/search cost for this work: **$0**. Synthetic usage in tests is recorded only in temporary test ledgers, never the owner's ledger.
+
+## Final verification record
+
+- Full automated workflow/invariant suite: **28 passed**; no paid calls.
+- TypeScript check: passed.
+- Public production build: passed with Next.js 16.4.0.
+- Browser checks: **7 passed** (six-suite run plus final evidence-navigation check): desktop/mobile public example, private credential setup, edited-profile output, URL fallback, empty/budget/provider states, and distinct opening labels/evidence navigation.
+- Public production access smoke test: `/api/analyze` returned **403** and `/owner` returned **404** even with owner mode and a valid-length owner token supplied at runtime.
+- Desktop (1280 px) and mobile (390 px) screenshots were inspected; no horizontal overflow or obscured primary controls was observed. Keyboard disclosure activation is covered in browser checks.
+- Separate Standards and Spec reviews each found two issues; all four were fixed and independently rechecked. See REVIEW.md.

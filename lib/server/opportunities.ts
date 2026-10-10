@@ -19,7 +19,19 @@ const jobSchema = z.object({
 const normalize = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]/g, '');
 const closedPattern =
-  /\b(no longer (accepting|available)|position (is )?(closed|filled)|job (is )?(closed|expired)|applications (are )?closed)\b/i;
+  /\b(no longer (accepting|available)|(?:position|job|role) (?:(?:is|was|has been|is now) )?(?:closed|filled|expired)|applications (?:(?:are|are now|have been) )?closed)\b/i;
+function roleClosed(page: SourcePage, title: string) {
+  const clauses = page.text.split(/(?<=[.!?])\s+|[;\n]/);
+  return clauses.some((clause, index) => {
+    if (!clause.toLowerCase().includes(title.toLowerCase())) return false;
+    const next = clauses[index + 1] ?? '';
+    return (
+      closedPattern.test(clause) ||
+      (/^(this (position|job|role)|applications)\b/i.test(next.trim()) &&
+        closedPattern.test(next))
+    );
+  });
+}
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, '');
 const plain = (value: string) =>
   cheerio.load(value).text().replace(/\s+/g, ' ').trim();
@@ -70,7 +82,7 @@ export async function researchOpenings(
 }> {
   const company =
     rec.company ||
-    (rec.relationship === 'Listed presenting company' ? rec.name : '');
+    (rec.relationshipKind === 'presenting-company' ? rec.name : '');
   const link = company && companyLink(event, company);
   if (!company || !link)
     return {
@@ -123,19 +135,11 @@ export async function researchOpenings(
       }
     }
     for (const page of pages) {
-      if (closedPattern.test(page.text)) continue;
       for (const raw of page.jobs) {
         const parsed = jobSchema.safeParse(raw);
         if (!parsed.success) continue;
         const job = parsed.data;
-        if (
-          pages.some(
-            (other) =>
-              other.text.toLowerCase().includes(job.title.toLowerCase()) &&
-              closedPattern.test(other.text),
-          )
-        )
-          continue;
+        if (pages.some((other) => roleClosed(other, job.title))) continue;
         if (
           normalize(job.hiringOrganization.name) !== normalize(company) ||
           !page.text.toLowerCase().includes(job.title.toLowerCase())
