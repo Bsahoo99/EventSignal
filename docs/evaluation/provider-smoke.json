@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-10T07:06:08.139Z",
+  "kind": "one live provider call with synthetic event input",
+  "model": "gemini-3.1-flash-lite",
+  "modelAccess": "confirmed by official model metadata endpoint",
+  "httpStatus": 200,
+  "ledgerBeforeUsd": 0,
+  "ledgerAfterUsd": 0.00025,
+  "structuredOutputAccepted": true,
+  "outcome": "partial",
+  "recommendationCount": 1,
+  "recordedEstimatedCostUsd": 0.00025,
+  "limitations": [
+    "Synthetic event input, not a real event recommendation",
+    "Real-source end-to-end quality remains pending",
+    "Ledger estimate uses published token tariffs; it is not an account billing statement"
+  ]
+}

@@ -33,9 +33,9 @@ The server binds to loopback. Owner requests also need the configured token, a l
 
 ## Budget and provider
 
-The adapter uses `gemini-3.1-flash-lite`, one structured extraction per analysis, no retries, no model tools, and no search grounding. Account access and a paid end-to-end run are **pending by user choice**. No application provider spend was incurred during implementation.
+The adapter uses `gemini-3.1-flash-lite`, one structured extraction per analysis, no retries, no model tools, and no search grounding. Account access and one live synthetic-input run were confirmed on October 10, 2026. The owner API returned valid structured output and reconciled the ledger to an estimated $0.00025. Real-event recommendation quality remains pending; see docs/EVALUATION.md.
 
-The [provider model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite) lists structured output support. [Pricing checked October 9, 2026](https://ai.google.dev/gemini-api/docs/pricing): standard text input $0.25/million tokens, output including thinking $1.50/million. Search can issue multiple charged queries; the app does not assume an included allowance or enable it. Recheck pricing before enabling a credential in the future.
+The [provider model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite) lists structured output support. [Pricing checked October 10, 2026](https://ai.google.dev/gemini-api/docs/pricing): standard text input $0.25/million tokens, output including thinking $1.50/million. Search can issue multiple charged queries; the app does not assume an included allowance or enable it. Recheck pricing before enabling a credential in the future.
 
 SQLite reserves $0.10 before each model call against an $8 development ceiling. The request body is at most 100 KB (conservatively below 100,000 input tokens); output is capped at 4,096 tokens. At recorded tariffs this fits within the reservation. Integer microdollars avoid floating-point accounting. Atomic transactions prevent concurrent processes overspending. Measured input/output usage reconciles the reservation; missing usage or unknown outcomes retain the full reservation. A crash leaves its reservation counted. Missing/corrupt ledgers fail closed.
 

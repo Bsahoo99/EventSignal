@@ -20,16 +20,16 @@ Application-level tests cover pasted and fetched attribution; changed profile/ro
 
 The browser suite checks desktop/mobile public briefs, disclosures and evidence links, rejection of public API requests, owner credential setup, edited profile submission, loading, and pasted recovery. UI success paths use the same coordinator with external fixtures. Build-time and runtime owner switches are both required. The production build disables live entry points.
 
-## Incomplete gates and limitations
+## Incomplete gates and limitations (updated October 10, 2026)
 
-- **Paid provider access and quality: pending by explicit user instruction.** No key was configured or requested in chat. Account access, actual structured-output acceptance, provider usage reconciliation, measured real-call cost, and real generated briefs still require a bounded owner run. Provider docs were checked; documentation is not account validation.
+- **Provider access and integration: confirmed October 10, 2026.** After the user configured the key locally, the official model endpoint confirmed account access. One synthetic event was submitted through the real owner HTTP API. Structured output was accepted, one exploratory recommendation returned, and the durable ledger reconciled the request to an estimated $0.00025. See [provider-smoke.json](evaluation/provider-smoke.json). This establishes integration, not real-event matching quality.
 - **Real-source end-to-end quality: pending.** Public retrieval was exercised and sample facts reviewed, but no model-generated real-page brief or real job research result was validated. Do not advertise an evaluated model or verified live matching quality.
 - Discovery is intentionally narrower than a search engine: linked company domains only. Automatic job verification supports readable JSON-LD plus visible title, not arbitrary career-page formats. Company aliases, complex identity relationships, semantic contradictions, and eligibility decisions need manual source review.
 - The initial profile contains only the selected summary in the PRD. Original resume/project records were unavailable in this workspace; enter exact project evidence in the editor before relying on personalized introductions.
 - The $2 validation reserve is not enabled. The development ceiling stays $8. No total account-spend guarantee is made.
 - Hosting is unconfigured. A production build is available; the site has not been published.
 
-Observed application model/search cost for this work: **$0**. Synthetic usage in tests is recorded only in temporary test ledgers, never the owner's ledger.
+Recorded estimated application model cost through October 10, 2026: **$0.00025** for one live synthetic-input run. Search remains disabled. Offline fixture-test usage remains in temporary test ledgers; the live smoke run is recorded in the owner ledger. This estimate is not a provider billing statement.
 
 ## Final verification record
 

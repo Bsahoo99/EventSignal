@@ -2,7 +2,7 @@
 
 **Source:** [Product requirements document](PRD.md)  
 **Date:** October 9, 2026  
-**Status:** All six tickets authorized for implementation on October 9, 2026. Application implementation is present; paid-provider and real-source end-to-end validation remain pending by user instruction. No external deployment or tracker publication occurred. See [evaluation](EVALUATION.md).
+**Status:** All six tickets authorized for implementation on October 9, 2026. Application implementation is present; a live provider smoke test passed on October 10, 2026; real-source end-to-end quality validation remains pending. No external deployment or tracker publication occurred. See [evaluation](EVALUATION.md).
 
 Each ticket is an end-to-end slice with acceptance criteria and its own verification. No separate infrastructure-only, UI-only, or test-only ticket is needed. There is no existing code to prefactor.
 
@@ -55,7 +55,7 @@ All slices preserve the PRD exclusions: no accounts, CRM, general resume ingesti
 | Ticket | Status |
 | --- | --- |
 | 01 | Saved public brief implemented; historical source evidence reviewed |
-| 02 | Private analysis, extraction and durable spending controls implemented; actual provider validation pending |
+| 02 | Private analysis, extraction and durable spending controls implemented; live synthetic-input provider validation passed |
 | 03 | Profile editing and reruns implemented with fixture-based workflow/browser checks |
 | 04 | Safe URL retrieval and pasted fallback implemented; real public fetch exercised, model end-to-end validation pending |
 | 05 | Bounded company/official-job research and ranking implemented with controlled-source tests; real generated job brief validation pending |

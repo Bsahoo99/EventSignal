@@ -13,7 +13,7 @@
 - [x] Owner mode accepts pasted public event text and uses the initial profile derived from Biswajeet's supplied professional material. The public example remains available without enabling live research.
 - [x] The request passes through one application-level analysis boundary and returns the result contract used by the saved-brief interface.
 - [x] Credentials remain server-side and outside version control. Missing credentials produce a useful setup state and no provider request. Public mode rejects direct requests for live analysis.
-- [ ] Model availability, structured-output compatibility, current pricing, and any search allowance assumptions are checked before paid integration validation. Gemini 3.1 Flash-Lite is the provisional single-provider default; access failures are reported without a silent provider substitution.
+- [x] Model availability, structured-output compatibility, current pricing, and any search allowance assumptions are checked before paid integration validation. Gemini 3.1 Flash-Lite is the provisional single-provider default; access failures are reported without a silent provider substitution.
 - [x] Before every paid operation, the application reserves a conservative maximum cost against a persistent local ledger. Combined reservations cannot exceed the $8 development stop threshold, including under concurrent requests or after restarting the application.
 - [x] Input size, model output, retries, source processing, and request duration are bounded. Usage is reconciled conservatively after each request; unknown outcomes are not assumed free. Missing or corrupt budget accounting prevents new paid work.
 - [x] Model/search charges are included where used. Unbounded paid operations stay disabled. The UI explains that the limit covers this application's usage, with $2 reserved separately for final validation, rather than claiming to cap unrelated account spending.
@@ -25,7 +25,7 @@
 - [x] No named targets or no credible fit produces an insufficient-evidence result. Provider timeout, malformed output, or exhausted budget produces a distinct partial/failure state with a next step, never filler recommendations.
 - [x] Progress reflects actual processing stages rather than simulated completion. Spending limitations are understandable in the owner interface.
 - [x] Workflow tests exercise pasted-text success, sparse evidence, ambiguous/historical/remote relationships, unsupported generated claims, hostile source instructions, missing credentials, provider failures, and budget exhaustion using controlled external responses.
-- [ ] Budget tests demonstrate persistent accounting and concurrent reservations. Normal tests make no billable calls; a bounded owner-mode validation confirms the actual provider path and records its cost.
+- [x] Budget tests demonstrate persistent accounting and concurrent reservations. Normal tests make no billable calls; a bounded owner-mode validation confirms the actual provider path and records its cost.
 
 ## Scope notes
 
@@ -34,3 +34,5 @@ Use local owner mode as the default private execution arrangement. Do not add a 
 **Demo:** Paste a short public event description, receive an exploratory brief, inspect its attribution, then demonstrate that insufficient budget prevents another paid analysis.
 
 **Implementation note:** Authorized as part of the full six-ticket scope. Checked criteria are supported by fixture-based tests, browser checks, builds, or manual source review. Unchecked criteria contain provider-dependent validation explicitly deferred by the user. See `docs/TICKETS.md` and `docs/EVALUATION.md` for the limits.
+
+**October 10 validation:** Account model access and one synthetic-input owner API run passed. Structured output and usage reconciliation were observed; recorded estimated cost $0.00025. Real-source quality remains a later gate.
