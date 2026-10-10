@@ -6,7 +6,7 @@
 - 03 — Edit the career profile and rerun matching.
 - 05 — Research official openings and rank supported opportunities.
 
-**Status:** draft — pending breakdown review
+**Status:** implementation present — see docs/EVALUATION.md for verification limits and pending live validation
 
 **Source:** EventSignal PRD; all acceptance gates, especially user stories 28–34 and the agreed real-source evaluation.
 
@@ -30,3 +30,5 @@
 Earlier tickets include tests for their own behavior; this ticket is not a deferred testing phase. It completes the demonstrable product, curates its public example, and records real-source evidence. External deployment is separate from a verified deployable build and requires a chosen destination.
 
 **Demo:** A visitor explores the saved example, then the owner edits the profile and runs a supported event privately while explaining evidence, uncertainty, and measured spending.
+
+**Implementation note:** Authorized as part of the full six-ticket scope. Acceptance checkboxes remain the original review checklist; use `docs/TICKETS.md` and `docs/EVALUATION.md` for the verified status, including incomplete provider-dependent gates.

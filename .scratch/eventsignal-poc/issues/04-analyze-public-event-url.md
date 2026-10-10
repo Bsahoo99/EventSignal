@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Run a private, budget-limited analysis from pasted event text.
 
-**Status:** draft — pending breakdown review
+**Status:** implementation present — see docs/EVALUATION.md for verification limits and pending live validation
 
 **Source:** EventSignal PRD; user stories 7–13, 25–28.
 
@@ -26,3 +26,5 @@
 Reuse the established analysis and budget paths. This slice establishes safe public retrieval for event content and later company/job sources. Do not build a broad crawler, authenticated integrations, browser automation for every provider, or universal event-platform support.
 
 **Demo:** Analyze a supported event page, then show a blocked page recovering through pasted text into the same result interface.
+
+**Implementation note:** Authorized as part of the full six-ticket scope. Acceptance checkboxes remain the original review checklist; use `docs/TICKETS.md` and `docs/EVALUATION.md` for the verified status, including incomplete provider-dependent gates.

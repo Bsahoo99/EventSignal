@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately once the breakdown is approved).
 
-**Status:** draft — pending breakdown review
+**Status:** implementation present — see docs/EVALUATION.md for verification limits and pending live validation
 
 **Source:** EventSignal PRD; user stories 20–25 and 30–34.
 
@@ -26,3 +26,5 @@
 Use a typed saved analysis and evidence contract that later live results can satisfy. Do not invent a live API merely to serve static data. Initial example evidence must be honest; final real-source evaluation and example refinement belong to ticket 06. No accounts, CRM, uploads, or paid integration are required here.
 
 **Demo:** Open the application without any secrets configured and walk through a saved networking brief and its supporting sources.
+
+**Implementation note:** Authorized as part of the full six-ticket scope. Acceptance checkboxes remain the original review checklist; use `docs/TICKETS.md` and `docs/EVALUATION.md` for the verified status, including incomplete provider-dependent gates.

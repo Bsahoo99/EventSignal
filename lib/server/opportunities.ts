@@ -1,0 +1,240 @@
+import { z } from 'zod';
+import * as cheerio from 'cheerio';
+import type { Profile, Recommendation, Evidence } from '../contracts';
+import type { SourcePage, PageReader } from './sources';
+const jobSchema = z.object({
+  title: z.string().min(1).max(200),
+  hiringOrganization: z.object({ name: z.string() }),
+  validThrough: z.string().optional(),
+  description: z.string().max(50000).optional(),
+  jobLocation: z
+    .object({
+      address: z.object({
+        addressLocality: z.string().optional(),
+        addressRegion: z.string().optional(),
+      }),
+    })
+    .optional(),
+});
+const normalize = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9]/g, '');
+const closedPattern =
+  /\b(no longer (accepting|available)|position (is )?(closed|filled)|job (is )?(closed|expired)|applications (are )?closed)\b/i;
+const host = (url: string) => new URL(url).hostname.replace(/^www\./, '');
+const plain = (value: string) =>
+  cheerio.load(value).text().replace(/\s+/g, ' ').trim();
+function companyLink(page: SourcePage, company: string) {
+  return page.links.find((link) => {
+    try {
+      return (
+        normalize(link.label).includes(normalize(company)) &&
+        normalize(host(link.url).split('.')[0]) === normalize(company)
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+function trustedCareerLink(
+  link: { label: string; url: string },
+  companyHost: string,
+) {
+  try {
+    const hostname = host(link.url);
+    return (
+      /career|jobs|openings|positions/i.test(
+        link.label + ' ' + new URL(link.url).pathname,
+      ) &&
+      (hostname === companyHost ||
+        [
+          'jobs.ashbyhq.com',
+          'boards.greenhouse.io',
+          'job-boards.greenhouse.io',
+          'jobs.lever.co',
+        ].includes(hostname))
+    );
+  } catch {
+    return false;
+  }
+}
+export async function researchOpenings(
+  rec: Recommendation,
+  event: SourcePage,
+  profile: Profile,
+  read: PageReader,
+  checkedAt: string,
+): Promise<{
+  recommendation: Recommendation;
+  evidence: Evidence[];
+  warning?: string;
+}> {
+  const company =
+    rec.company ||
+    (rec.relationship === 'Listed presenting company' ? rec.name : '');
+  const link = company && companyLink(event, company);
+  if (!company || !link)
+    return {
+      recommendation: rec,
+      evidence: [],
+      warning: `${rec.name}: no unambiguous official company link was available for job research.`,
+    };
+  const evidence: Evidence[] = [];
+  try {
+    const home = await read(link.url);
+    if (host(home.url) !== host(link.url))
+      throw new Error('Company redirected outside its established domain.');
+    const context = home.text
+      .split(/(?<=[.!?])\s+/)
+      .find(
+        (sentence) =>
+          sentence.toLowerCase().includes(company.toLowerCase()) &&
+          sentence.length < 500,
+      );
+    if (context)
+      evidence.push({
+        id: `company-${rec.id}`,
+        kind: 'company-page',
+        title: `${company} company context`,
+        excerpt: context,
+        entity: company,
+        url: home.url,
+        checkedAt,
+      });
+    const pages = [home];
+    const visited = new Set([home.url]);
+    let incomplete = false;
+    for (let index = 0; index < pages.length && visited.size < 4; index++) {
+      const careers = pages[index].links.filter((l) =>
+        trustedCareerLink(l, host(home.url)),
+      );
+      for (const career of careers) {
+        if (visited.has(career.url) || visited.size >= 4) continue;
+        visited.add(career.url);
+        try {
+          const page = await read(career.url);
+          if (host(page.url) !== host(career.url))
+            throw new Error(
+              'Careers source redirected outside the established source domain.',
+            );
+          pages.push(page);
+        } catch {
+          incomplete = true;
+        }
+      }
+    }
+    for (const page of pages) {
+      if (closedPattern.test(page.text)) continue;
+      for (const raw of page.jobs) {
+        const parsed = jobSchema.safeParse(raw);
+        if (!parsed.success) continue;
+        const job = parsed.data;
+        if (
+          pages.some(
+            (other) =>
+              other.text.toLowerCase().includes(job.title.toLowerCase()) &&
+              closedPattern.test(other.text),
+          )
+        )
+          continue;
+        if (
+          normalize(job.hiringOrganization.name) !== normalize(company) ||
+          !page.text.toLowerCase().includes(job.title.toLowerCase())
+        )
+          continue;
+        if (
+          job.validThrough &&
+          (!Number.isFinite(Date.parse(job.validThrough)) ||
+            Date.parse(job.validThrough) < Date.parse(checkedAt))
+        )
+          continue;
+        if (
+          !profile.roles.some((role) =>
+            normalize(job.title).includes(normalize(role)),
+          )
+        )
+          continue;
+        const description = job.description
+          ? plain(job.description)
+          : undefined;
+        const requirements =
+          description && page.text.includes(description)
+            ? description.slice(0, 1200)
+            : undefined;
+        const location = [
+          job.jobLocation?.address.addressLocality,
+          job.jobLocation?.address.addressRegion,
+        ]
+          .filter(Boolean)
+          .join(', ');
+        const jobEvidence: Evidence = {
+          id: `job-${rec.id}`,
+          kind: 'official-job',
+          title: `${company}: ${job.title}`,
+          excerpt: `The retrieved page lists ${job.title} for ${company}.${requirements ? ' ' + requirements : ''}`,
+          entity: company,
+          url: page.url,
+          checkedAt,
+        };
+        evidence.push(jobEvidence);
+        if (profile.constraints.trim())
+          return {
+            recommendation: {
+              ...rec,
+              evidence: [...rec.evidence, ...evidence],
+              uncertainties: [
+                ...rec.uncertainties,
+                'An official role was found, but your hard constraints have not been established. It is not promoted as a verified match.',
+              ],
+            },
+            evidence,
+            warning: `${company}: hard constraints require your manual check.`,
+          };
+        return {
+          recommendation: {
+            ...rec,
+            opportunity: {
+              kind: 'verified-opening',
+              opening: {
+                title: job.title,
+                url: page.url,
+                checkedAt,
+                requirements,
+                location:
+                  location && page.text.includes(location)
+                    ? location
+                    : undefined,
+              },
+            },
+            fit: `An official listing matches your submitted target role (${job.title}). ${rec.fit}`,
+            uncertainties: rec.uncertainties
+              .filter((u) => !u.startsWith('No current opening'))
+              .concat([
+                'An official listing does not guarantee continued availability, candidate eligibility, or a referral.',
+                ...(requirements
+                  ? []
+                  : [
+                      'Role title supported; requirements were not established from readable page text.',
+                    ]),
+              ]),
+            evidence: [...rec.evidence, ...evidence],
+          },
+          evidence,
+          warning: incomplete
+            ? `${company}: some detail pages were unreadable; verification is limited to the recorded fields.`
+            : undefined,
+        };
+      }
+    }
+    return {
+      recommendation: { ...rec, evidence: [...rec.evidence, ...evidence] },
+      evidence,
+      warning: `${company}: no supported matching opening found in the bounded pages checked. This does not mean the company is not hiring.`,
+    };
+  } catch {
+    return {
+      recommendation: { ...rec, evidence: [...rec.evidence, ...evidence] },
+      evidence,
+      warning: `${company}: some official pages could not be read or the source limit was reached. Job verification is incomplete.`,
+    };
+  }
+}

@@ -1,8 +1,8 @@
-# EventSignal POC — Draft ticket breakdown
+# EventSignal POC — Ticket implementation status
 
 **Source:** [Product requirements document](PRD.md)  
 **Date:** October 9, 2026  
-**Status:** Six draft tickets prepared for breakdown review. None has been implemented or published to an external tracker.
+**Status:** All six tickets authorized for implementation on October 9, 2026. Application implementation is present; paid-provider and real-source end-to-end validation remain pending by user instruction. No external deployment or tracker publication occurred. See [evaluation](EVALUATION.md).
 
 Each ticket is an end-to-end slice with acceptance criteria and its own verification. No separate infrastructure-only, UI-only, or test-only ticket is needed. There is no existing code to prefactor.
 
@@ -50,8 +50,15 @@ For a solo build, the simple order is 01 → 02 → 03 → 04 → 05 → 06. The
 
 All slices preserve the PRD exclusions: no accounts, CRM, general resume ingestion, MCP, authenticated attendee scraping, contact harvesting, or automated outreach. Tests favor the agreed application-level analysis boundary and a few browser checks, with targeted lower-level checks only for critical invariants.
 
-## Review and publication
+## Implementation record
 
-Review the ticket granularity, genuine blocking edges, and whether any slice should be merged or split. Drafts are not yet marked `ready-for-agent` because the to-tickets workflow calls for approval of the breakdown first.
+| Ticket | Status |
+| --- | --- |
+| 01 | Saved public brief implemented; historical source evidence reviewed |
+| 02 | Private analysis, extraction and durable spending controls implemented; actual provider validation pending |
+| 03 | Profile editing and reruns implemented with fixture-based workflow/browser checks |
+| 04 | Safe URL retrieval and pasted fallback implemented; real public fetch exercised, model end-to-end validation pending |
+| 05 | Bounded company/official-job research and ranking implemented with controlled-source tests; real generated job brief validation pending |
+| 06 | Public build, setup, evaluation record and automated checks provided; paid quality evaluation and external deployment pending |
 
-No issue tracker is configured. These files provide a concrete local review set, with one file per ticket and blocking edges expressed as ticket numbers and titles. After approval, they can serve as the local ticket set. To publish to a configured tracker, run `/setup-matt-pocock-skills`; external issues and native blocking relationships have not been created. The PRD is unchanged.
+Local ticket files retain unchecked acceptance gates where live validation is unavailable. They are the project's configured local tracker. Triage was skipped as requested. All work remains on the initial `main` branch.

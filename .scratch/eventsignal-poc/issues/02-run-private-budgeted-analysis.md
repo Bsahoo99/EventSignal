@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — Explore a saved, evidence-backed opportunity brief.
 
-**Status:** draft — pending breakdown review
+**Status:** implementation present — see docs/EVALUATION.md for verification limits and pending live validation
 
 **Source:** EventSignal PRD; user stories 8–13, 18–26, 28–29, and 34.
 
@@ -32,3 +32,5 @@
 Use local owner mode as the default private execution arrangement. Do not add a user-account system. Keep the initial career profile prefilled; editing and reruns are ticket 03. Public URL retrieval is ticket 04, and official job research is ticket 05. The cost ledger is part of this usable slice, not a later hardening task.
 
 **Demo:** Paste a short public event description, receive an exploratory brief, inspect its attribution, then demonstrate that insufficient budget prevents another paid analysis.
+
+**Implementation note:** Authorized as part of the full six-ticket scope. Acceptance checkboxes remain the original review checklist; use `docs/TICKETS.md` and `docs/EVALUATION.md` for the verified status, including incomplete provider-dependent gates.

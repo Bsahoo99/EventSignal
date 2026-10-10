@@ -1,0 +1,36 @@
+{
+  "name": "eventsignal",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "EVENTSIGNAL_MODE=public next build --webpack",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:browser": "playwright test",
+    "budget:init": "node --import tsx scripts/init-budget.ts",
+    "evaluate": "node --import tsx scripts/evaluate.ts",
+    "dev:owner": "EVENTSIGNAL_MODE=owner next dev --hostname 127.0.0.1"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "ipaddr.js": "^2.3.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

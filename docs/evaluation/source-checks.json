@@ -1,0 +1,35 @@
+[
+  {
+    "name": "Named-speaker conference announcement",
+    "url": "https://blog.langchain.dev/introducing-interrupt-langchain-conference/",
+    "checkedAt": "2026-10-10T06:40:31.444Z",
+    "status": "readable",
+    "finalUrl": "https://www.langchain.com/blog/introducing-interrupt-langchain-conference",
+    "characters": 5007,
+    "excerpt": "Join thought leaders like Andrew Ng, Cognition Labs, Replit, 11x, and more as they share the latest innovations shaping the AI agent space. Get hands-on. May 13th is our pre-conference day, where we’ll have workshops focused on real-world, production-ready agent use cases. Get live instruction from ",
+    "links": 60,
+    "providerRun": "not run — no credentials; quality validation pending",
+    "costUsd": 0
+  },
+  {
+    "name": "Sparse non-event negative control",
+    "url": "https://example.com/",
+    "checkedAt": "2026-10-10T06:40:31.501Z",
+    "status": "readable",
+    "finalUrl": "https://example.com/",
+    "characters": 156,
+    "excerpt": "This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.",
+    "links": 0,
+    "providerRun": "not run — no credentials; quality validation pending",
+    "costUsd": 0
+  },
+  {
+    "name": "Event listing with possible rendering/access limits",
+    "url": "https://lu.ma/sf",
+    "checkedAt": "2026-10-10T06:40:31.864Z",
+    "status": "retrieval limitation",
+    "limitation": "Page exceeds 250 KB.",
+    "providerRun": "not run",
+    "costUsd": 0
+  }
+]

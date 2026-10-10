@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 — Analyze a public event URL with a pasted-text fallback.
 
-**Status:** draft — pending breakdown review
+**Status:** implementation present — see docs/EVALUATION.md for verification limits and pending live validation
 
 **Source:** EventSignal PRD; user stories 14–26 and 29.
 
@@ -29,3 +29,5 @@
 This slice works with the prefilled profile if ticket 03 is unfinished; profile editing is therefore not a blocker. Avoid browser automation or third-party enrichment infrastructure solely to defeat unreadable job pages. Report the limitation and retain supported partial results.
 
 **Demo:** Analyze an event containing one company with a readable official role and another without verified openings; compare their labels, ranking explanations, and evidence.
+
+**Implementation note:** Authorized as part of the full six-ticket scope. Acceptance checkboxes remain the original review checklist; use `docs/TICKETS.md` and `docs/EVALUATION.md` for the verified status, including incomplete provider-dependent gates.

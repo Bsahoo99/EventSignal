@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Run a private, budget-limited analysis from pasted event text.
 
-**Status:** draft — pending breakdown review
+**Status:** implementation present — see docs/EVALUATION.md for verification limits and pending live validation
 
 **Source:** EventSignal PRD; user stories 1–6, 21–24, and 27.
 
@@ -26,3 +26,5 @@
 General-purpose resume upload/parsing, external profile synchronization, LinkedIn extraction, accounts, and advanced profile persistence are excluded. Selecting profile storage is an implementation detail; editing must not expose private fields to the public example.
 
 **Demo:** Change the owner's target emphasis from applied AI to backend-oriented work, rerun the same event, and show the evidence-supported differences in the brief.
+
+**Implementation note:** Authorized as part of the full six-ticket scope. Acceptance checkboxes remain the original review checklist; use `docs/TICKETS.md` and `docs/EVALUATION.md` for the verified status, including incomplete provider-dependent gates.
