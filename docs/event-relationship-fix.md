@@ -1,0 +1,24 @@
+# Event relationship regression — October 10, 2026
+
+The owner reported repeated insufficient-evidence results. The first supplied event lists hiring partners and their roles; the current event, Heavyweights, explicitly describes Ankur Goyal and Corinne Riley discussing evals and agent observability. Both are usable public event evidence.
+
+## Required behavior
+
+- Recognize named fireside/discussion participants as speakers when their exact source quote supports their identity, company, and discussion relationship. Preserve existing exclusions for ambiguous and historical identities.
+- Match the narrow terminology equivalents `eval`/`evals`/`evaluation`/`evaluations` and `agent`/`agents`, respecting word boundaries. Explain fit using both original event topics and submitted skill names.
+- Recognize explicitly listed hiring partners, even where the event gives a role title but no matching skill keywords. Label these exploratory leads with fit not established; do not invent skill overlap or eligibility.
+- Show an event-listed role only when the quoted company entry supports that company's title. A role mentioned elsewhere in a multi-company quote must not be attributed to the wrong company.
+- Ignore invisible zero-width formatting and whitespace differences during quote comparison; continue to reject invented or paraphrased source content.
+- Keep event participation and listed roles distinct from independently verified official openings. Preserve the existing official-source verification and budget rules.
+- Return source evidence, profile-specific conversation preparation, and uncertainty. Keep the existing maximum of five recommendations.
+
+The regression tests use the already approved application-level `analyze` seam (PRD Testing Decisions). Controlled extraction/page responses incur no paid usage. Live checks use the configured owner ledger and existing $8 ceiling.
+
+Review baseline: `078902f8416ead75f774995e5c04bad1d4ad7e2a`, the clean commit immediately preceding this user-reported fix.
+
+## Validation
+
+- 33 automated workflow/invariant checks passed; TypeScript, public production build, formatting, and whitespace checks passed.
+- Heavyweights was submitted through the actual owner UI with Gemini. The final result shows Baseten, Ankur Goyal, and Corinne Riley, all exploratory, with supported agents/evals relevance. The page lacks unambiguous official company links, so job research remains incomplete. The final displayed request cost was $0.0009 (rounded by the UI).
+- A captured real Gemini response for the Talent Hunt exposed invisible zero-width characters in the source that the model omitted from its quotes. Replaying that exact response through the fixed coordinator returns all five hiring partners with correctly attributed role titles. This replay used a temporary test ledger and made no further paid call. It is not a claim of fresh live job verification.
+- The named roles remain event claims. No independently verified opening, eligibility, attendance, or referral willingness was established by these checks.

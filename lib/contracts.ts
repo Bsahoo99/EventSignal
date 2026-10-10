@@ -56,7 +56,9 @@ export type Recommendation = {
   name: string;
   company: string;
   relationship: string;
-  relationshipKind: 'speaker' | 'host' | 'presenting-company';
+  relationshipKind:
+    'speaker' | 'host' | 'presenting-company' | 'hiring-partner';
+  eventRole?: string;
   modality: 'unknown' | 'remote' | 'in-person';
   opportunity:
     { kind: 'exploratory' } | { kind: 'verified-opening'; opening: Opening };

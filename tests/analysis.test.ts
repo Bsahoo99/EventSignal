@@ -2,7 +2,236 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyze } from '../lib/server/analysis';
 import { initialProfile } from '../lib/profile';
+import type { Recommendation } from '../lib/contracts';
 import { createTestDependencies, eventText } from './fixtures';
+test('invisible formatting on a public page does not erase a supported hiring partner', async () => {
+  const quote =
+    'The works and hiring partners Engineering Track Cresta: Senior Machine Learning Engineer';
+  const result = await analyze(
+    {
+      profile: initialProfile,
+      event: {
+        kind: 'text',
+        text: 'The works and hiring partners \u200bEngineering Track\n\u200bCresta: Senior\u00a0Machine Learning Engineer',
+      },
+    },
+    createTestDependencies({
+      extract: async () => ({
+        data: {
+          eventName: 'The works and hiring partners',
+          eventDate: '',
+          historical: false,
+          entities: [
+            {
+              name: 'Cresta',
+              company: 'Cresta',
+              relationship: 'hiring-partner',
+              eventRole: 'Senior Machine Learning Engineer',
+              quote,
+              topics: [],
+              modality: 'unknown',
+              historical: false,
+              ambiguous: false,
+            },
+          ],
+        },
+      }),
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.brief.recommendations[0]?.name, 'Cresta');
+  assert.equal(
+    result.brief.recommendations[0]?.eventRole,
+    'Senior Machine Learning Engineer',
+  );
+});
+test('event terminology evals and agent observability matches evaluation and agents without substring false matches', async () => {
+  const quote =
+    'Ankur Goyal from Braintrust discusses evals and agent observability.';
+  for (const skill of ['evaluation', 'agents', 'reagents']) {
+    const result = await analyze(
+      {
+        profile: { ...initialProfile, skills: [skill] },
+        event: { kind: 'text', text: quote },
+      },
+      createTestDependencies({
+        extract: async () => ({
+          data: {
+            eventName: 'Discussion',
+            eventDate: '',
+            historical: false,
+            entities: [
+              {
+                name: 'Ankur Goyal',
+                company: 'Braintrust',
+                relationship: 'speaker',
+                quote,
+                topics: ['evals', 'agent observability'],
+                modality: 'unknown',
+                historical: false,
+                ambiguous: false,
+              },
+            ],
+          },
+        }),
+      }),
+    );
+    assert.equal(result.ok, true);
+    if (!result.ok) continue;
+    assert.equal(
+      result.brief.recommendations.length,
+      skill === 'reagents' ? 0 : 1,
+    );
+    if (skill !== 'reagents') {
+      assert.match(
+        result.brief.recommendations[0].fit,
+        skill === 'evaluation' ? /evals/ : /agent observability/,
+      );
+      assert.ok(result.brief.recommendations[0].fit.includes(skill));
+    }
+  }
+});
+test('a named fireside discussion produces supported speakers without the word speaker', async () => {
+  const quote =
+    'Ankur Goyal, Co-founder and CEO of Braintrust, sits down with Corinne Riley, Partner at Greylock to discuss topics like: Why the focus is moving from standalone evals to agent observability. Rebuilding your database for agents.';
+  const result = await analyze(
+    {
+      profile: initialProfile,
+      event: { kind: 'text', text: `Heavyweights. ${quote}` },
+    },
+    createTestDependencies({
+      extract: async () => ({
+        data: {
+          eventName: 'Heavyweights',
+          eventDate: '',
+          historical: false,
+          entities: [
+            ['Ankur Goyal', 'Braintrust'],
+            ['Corinne Riley', 'Greylock'],
+          ].map(([name, company]) => ({
+            name,
+            company,
+            relationship: 'speaker',
+            quote,
+            topics: ['agents'],
+            modality: 'unknown',
+            historical: false,
+            ambiguous: false,
+          })),
+        },
+      }),
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(
+    result.brief.recommendations.map((rec) => rec.name),
+    ['Ankur Goyal', 'Corinne Riley'],
+  );
+  for (const rec of result.brief.recommendations) {
+    assert.equal(rec.opportunity.kind, 'exploratory');
+    assert.match(rec.fit, /agents/);
+    assert.equal(rec.evidence[0].excerpt, quote);
+  }
+});
+test('event hiring partners retain listed roles as exploratory leads without inventing skill fit', async () => {
+  const text =
+    'The AI-Native Talent Hunt. The works and hiring partners Product Track Creao AI: AI-Native Product Designer WH Group: Global Solution Manager Marketing Track TinyFish: Founding DevRel & Product Marketing Manager Engineering Track Cresta: Senior Machine Learning Engineer Zingage: Deployment Strategist & Customer Operations';
+  const partners = [
+    ['Creao AI', 'AI-Native Product Designer'],
+    ['WH Group', 'Global Solution Manager'],
+    ['TinyFish', 'Founding DevRel & Product Marketing Manager'],
+    ['Cresta', 'Senior Machine Learning Engineer'],
+    ['Zingage', 'Deployment Strategist & Customer Operations'],
+  ];
+  const result = await analyze(
+    {
+      profile: initialProfile,
+      event: { kind: 'url', url: 'https://luma.com/yjt7f4ty' },
+    },
+    createTestDependencies({
+      readPage: async () => ({
+        url: 'https://luma.com/yjt7f4ty',
+        text,
+        links: [],
+        jobs: [],
+      }),
+      extract: async () => ({
+        data: {
+          eventName: 'The AI-Native Talent Hunt',
+          eventDate: '',
+          historical: false,
+          entities: partners.map(([name, eventRole]) => ({
+            name,
+            company: name,
+            relationship: 'hiring-partner',
+            eventRole,
+            quote: text.slice(text.indexOf('The works')),
+            topics: [],
+            modality: 'unknown',
+            historical: false,
+            ambiguous: false,
+          })),
+        },
+      }),
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.brief.outcome, 'partial');
+  assert.equal(result.brief.recommendations.length, 5);
+  for (const [name, role] of partners) {
+    const rec: Recommendation = result.brief.recommendations.find(
+      (item) => item.name === name,
+    )!;
+    assert.equal(rec.relationshipKind, 'hiring-partner');
+    assert.equal(rec.eventRole, role);
+    assert.equal(rec.opportunity.kind, 'exploratory');
+    assert.match(rec.fit, /fit.*not.*established/i);
+    assert.doesNotMatch(rec.fit, /overlap with your submitted skills/);
+    assert.match(rec.introduction, /Applied AI Engineer/);
+    assert.ok(rec.questions.every((q) => !q.includes('undefined')));
+    assert.equal(rec.evidence[0].url, 'https://luma.com/yjt7f4ty');
+    assert.ok(rec.evidence[0].excerpt.includes(`${name}: ${role}`));
+  }
+});
+test('a hiring partner cannot inherit another company’s event-listed role', async () => {
+  const text =
+    'Hiring partners: Cresta: Senior Machine Learning Engineer. Zingage: Deployment Strategist & Customer Operations.';
+  const result = await analyze(
+    { profile: initialProfile, event: { kind: 'text', text } },
+    createTestDependencies({
+      extract: async () => ({
+        data: {
+          eventName: 'Hiring partners',
+          eventDate: '',
+          historical: false,
+          entities: [
+            {
+              name: 'Cresta',
+              company: 'Cresta',
+              relationship: 'hiring-partner',
+              eventRole: 'Deployment Strategist & Customer Operations',
+              quote: text,
+              topics: [],
+              modality: 'unknown',
+              historical: false,
+              ambiguous: false,
+            },
+          ],
+        },
+      }),
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.brief.recommendations[0].eventRole, undefined);
+  assert.doesNotMatch(
+    result.brief.recommendations[0].fit,
+    /Deployment Strategist/,
+  );
+});
 test('pasted event becomes an attributed exploratory brief', async () => {
   const result = await analyze(
     { profile: initialProfile, event: { kind: 'text', text: eventText } },

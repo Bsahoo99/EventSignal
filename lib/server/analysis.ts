@@ -8,6 +8,20 @@ import { extractionSchema, type Extractor } from './model';
 import { Budget } from './budget';
 import { researchOpenings } from './opportunities';
 import { readPublicPage, type PageReader, type SourcePage } from './sources';
+function visibleText(value: string) {
+  return value
+    .replace(/[\u200b\ufeff]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function matchingPhrase(value: string) {
+  return ` ${value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\bevals?\b|\bevaluations\b/g, 'evaluation')
+    .replace(/\bagents\b/g, 'agent')
+    .trim()} `;
+}
 export type Dependencies = {
   mode: 'public' | 'owner';
   credentials: boolean;
@@ -59,6 +73,7 @@ export async function analyze(
     }
   }
   const source = page?.text ?? (event.kind === 'text' ? event.text : '');
+  const visibleSource = visibleText(source);
   stage(page ? 'Public event page read' : 'Event text received');
   let reservation: string;
   try {
@@ -94,15 +109,19 @@ export async function analyze(
     const identity = entity.name.toLowerCase().trim();
     if (seen.has(identity)) continue;
     seen.add(identity);
-    const quote = entity.quote.toLowerCase();
+    const quote = visibleText(entity.quote).toLowerCase();
     const relationshipSupported =
       entity.relationship === 'speaker'
-        ? /\b(speaker|speaking|talk|keynote|presenter)\b/i.test(quote)
+        ? /\b(speaker|speaking|talks?|keynote|presenter|discuss(?:es|ing)?|fireside|panelist|panellist|interview)\b/i.test(
+            quote,
+          )
         : entity.relationship === 'host'
           ? /\b(host|hosting|hosted|organizer|organiser)\b/i.test(quote)
-          : /\b(presenting|presentation|demo)\b/i.test(quote);
+          : entity.relationship === 'hiring-partner'
+            ? /\bhiring[ -]partners?\b/i.test(quote)
+            : /\b(presenting|presentation|demo)\b/i.test(quote);
     if (
-      !source.includes(entity.quote) ||
+      !visibleSource.includes(visibleText(entity.quote)) ||
       !quote.includes(entity.name.toLowerCase()) ||
       (entity.company && !quote.includes(entity.company.toLowerCase())) ||
       !relationshipSupported ||
@@ -118,14 +137,31 @@ export async function analyze(
     const topics = entity.topics.filter((topic) =>
       quote.includes(topic.toLowerCase()),
     );
-    const matched = profile.skills.filter((skill) =>
-      topics.some(
+    const matches = profile.skills.flatMap((skill) => {
+      const topic = topics.find(
         (topic) =>
-          topic.toLowerCase().includes(skill.toLowerCase()) ||
-          skill.toLowerCase().includes(topic.toLowerCase()),
-      ),
-    );
-    if (!matched.length) continue;
+          matchingPhrase(topic).includes(matchingPhrase(skill)) ||
+          matchingPhrase(skill).includes(matchingPhrase(topic)),
+      );
+      return topic ? [{ skill, topic }] : [];
+    });
+    const matched = matches.map((match) => match.skill);
+    const matchedTopics = [...new Set(matches.map((match) => match.topic))];
+    const hiringPartner = entity.relationship === 'hiring-partner';
+    if (!matched.length && !hiringPartner) continue;
+    const escapePattern = (value: string) =>
+      value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const eventRole =
+      hiringPartner &&
+      entity.eventRole &&
+      new RegExp(
+        `${escapePattern(entity.name)}\\s*[:–—-]\\s*${escapePattern(entity.eventRole)}(?=$|[\\s.,;])`,
+        'i',
+      ).test(visibleText(entity.quote))
+        ? entity.eventRole
+        : undefined;
+    const discussionTopic =
+      matchedTopics[0] ?? eventRole ?? 'the event challenge';
     const experience =
       profile.experience.find((item) =>
         matched.some((skill) =>
@@ -168,12 +204,18 @@ export async function analyze(
       company: entity.company,
       relationshipKind: entity.relationship,
       relationship: `Listed ${entity.relationship.replaceAll('-', ' ')}`,
+      eventRole,
       modality,
       opportunity: { kind: 'exploratory' },
-      fit: `The event evidence mentions ${matched.join(', ')}. These overlap with your submitted skills and may support your interest in ${profile.roles.join(', ')}. Relevance is an interpretation.${profile.preferences ? ` Your preferences: ${profile.preferences} These have not been verified against an opening.` : ''}`,
+      fit: `${matched.length ? `The event evidence mentions ${matchedTopics.join(', ')}. These relate to your submitted skills (${matched.join(', ')}) and may support your interest in ${profile.roles.join(', ')}. Relevance is an interpretation.` : `The event lists this company as a hiring partner${eventRole ? ` with the role ${eventRole}` : ''}. Fit with your target roles (${profile.roles.join(', ')}) and skills is not established; use this as a lead to investigate.`}${profile.preferences ? ` Your preferences: ${profile.preferences} These have not been verified against an opening.` : ''}`,
       experience,
       uncertainties: [
         'No current opening, hiring authority, or referral willingness established.',
+        ...(hiringPartner
+          ? [
+              'Event-listed hiring participation does not verify a current job opening or candidate eligibility.',
+            ]
+          : []),
         modality === 'remote'
           ? 'Remote participation: do not plan an in-person approach.'
           : 'Availability for a conversation is unknown.',
@@ -181,12 +223,18 @@ export async function analyze(
           ? [`Hard constraints not verified: ${profile.constraints}`]
           : []),
       ],
-      introduction: `Hi, I’m interested in ${profile.roles[0]}. My background: ${experience} I noticed ${matched[0]} in the event program; I’d enjoy comparing notes.`,
-      questions: [
-        `What challenges have you encountered with ${matched[0]}?`,
-        `How do you assess whether work involving ${matched[0]} is ready for real users?`,
-        `What experience would be useful for someone contributing to this area?`,
-      ],
+      introduction: `Hi, I’m interested in ${profile.roles[0]}. My background: ${experience} I noticed ${discussionTopic} in the event program; I’d enjoy comparing notes.`,
+      questions: hiringPartner
+        ? [
+            `What does the ${eventRole ?? 'event challenge'} involve day to day?`,
+            `How relevant would experience with ${profile.skills.join(', ')} be to this work?`,
+            'Is there a current official role description, and which requirements should I check?',
+          ]
+        : [
+            `What challenges have you encountered with ${discussionTopic}?`,
+            `How do you assess whether work involving ${discussionTopic} is ready for real users?`,
+            `What experience would be useful for someone contributing to this area?`,
+          ],
       evidence: [eventEvidence, profileEvidence],
     });
   }

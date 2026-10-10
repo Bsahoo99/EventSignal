@@ -82,7 +82,10 @@ export async function researchOpenings(
 }> {
   const company =
     rec.company ||
-    (rec.relationshipKind === 'presenting-company' ? rec.name : '');
+    (rec.relationshipKind === 'presenting-company' ||
+    rec.relationshipKind === 'hiring-partner'
+      ? rec.name
+      : '');
   const link = company && companyLink(event, company);
   if (!company || !link)
     return {

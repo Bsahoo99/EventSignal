@@ -76,8 +76,8 @@ export function Brief({ brief }: { brief: BriefData }) {
         <div className="empty">
           <h3>Not enough evidence for a useful connection.</h3>
           <p>
-            Try a public event page naming speakers or presenting companies, or
-            paste its program. Keep your profile specific.
+            Try a public event page naming speakers, presenting companies, or
+            hiring partners, or paste its program. Keep your profile specific.
           </p>
         </div>
       )}
@@ -92,6 +92,12 @@ export function Brief({ brief }: { brief: BriefData }) {
             <h3>{rec.name}</h3>
             {rec.company && <p className="company">{rec.company}</p>}
             <p>{rec.relationship}</p>
+            {rec.eventRole && (
+              <p>
+                <strong>Event-listed role:</strong> {rec.eventRole}. Current
+                opening not established by the event listing.
+              </p>
+            )}
             <p className="muted">
               Attendance:{' '}
               {rec.modality === 'unknown' ? 'not established' : rec.modality}.{' '}
