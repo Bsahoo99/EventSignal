@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-10T21:59:42.946Z",
+  "eventUrl": "https://luma.com/yjt7f4ty",
+  "ownerHttpStatus": 200,
+  "analysisOk": true,
+  "recommendations": 5,
+  "companySearchStatus": "search-unavailable for all five companies",
+  "analysisLedgerChargeUsd": 0.501593,
+  "diagnostic": {
+    "checkedAt": "2026-10-10T22:00:13.741Z",
+    "httpStatus": 422,
+    "providerCode": "SUBSCRIPTION_TOKEN_INVALID",
+    "providerDetail": "The provided subscription token is invalid.",
+    "errorType": "Error",
+    "chargedUsd": 0.1
+  },
+  "note": "Failed requests retain conservative reservations; these amounts are not confirmed provider billing. No key or private profile is included."
+}

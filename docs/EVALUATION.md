@@ -29,7 +29,7 @@ The browser suite checks desktop/mobile public briefs, disclosures and evidence 
 - The $2 validation reserve is not enabled. The development ceiling stays $8. No total account-spend guarantee is made.
 - Hosting is unconfigured. A production build is available; the site has not been published.
 
-The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Gemini grounding remains disabled; optional bounded Brave discovery is implemented, with live Brave validation pending its key. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
+The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Gemini grounding remains disabled; optional bounded Brave discovery is implemented, with live Brave validation blocked by an invalid subscription token. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
 
 ## Final verification record
 
@@ -47,7 +47,7 @@ The initial live synthetic-input run recorded **$0.00025**. Subsequent user even
 - Added missing-link discovery, manual company website input, per-company research statuses, persistent 24-hour search caching, and search charges in the existing $8 ledger.
 - Application regressions cover verified official pages versus snippets, name/domain/context ambiguity (including unrelated subdomains and “reagents”), manual fallback, missing/failed search, cache freshness/expiry, and budget/research limits. Fixture runs incur no real provider charges.
 - Live safe-reader checks initially rejected Cresta and Braintrust above 250 KB. Both now return readable source text with the bounded 1 MB HTML allowance; the 20,000-character extraction cap and address/redirect/time protections remain. See [company-source-checks.json](evaluation/company-source-checks.json). These source checks made no model/search calls and do not establish verified job openings.
-- Live Brave search remains pending: BRAVE_SEARCH_API_KEY was absent at the final configuration check. The user agreed to add it. Controlled provider-adapter tests are not a live search validation.
+- Live Brave validation attempted after the user saved the key: the owner API returned five exploratory companies, but all searches failed. One follow-up diagnostic returned HTTP 422 / SUBSCRIPTION_TOKEN_INVALID. Successful search validation remains blocked until a valid Brave subscription token is configured. See [brave-smoke.json](evaluation/brave-smoke.json). The analysis recorded $0.501593 and the diagnostic retained another $0.10; failures use conservative reservations, not confirmed provider billing.
 - New UI browser inspection was blocked by browser URL policy. Earlier browser-suite results above apply to the earlier implementation, not this new field/status display. No alternate browser surface was used to bypass the block.
 
 Final discovery verification: **44 automated tests passed**, TypeScript passed, public production build passed, formatting and diff checks passed. Independent Standards and Spec rechecks each reported zero unresolved findings.
