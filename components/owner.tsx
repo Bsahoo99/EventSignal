@@ -15,6 +15,7 @@ export function Owner() {
   const [kind, setKind] = useState<'text' | 'url'>('text');
   const [text, setText] = useState('');
   const [url, setUrl] = useState('');
+  const [companyWebsites, setCompanyWebsites] = useState('');
   const [pending, setPending] = useState(false);
   const [stage, setStage] = useState('');
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -26,6 +27,21 @@ export function Owner() {
     setError('');
     setResult(null);
     try {
+      const websites = companyWebsites
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const separator = line.indexOf('|');
+          if (separator < 1)
+            throw new Error(
+              'Use Company name | https://official-website.com for each company website.',
+            );
+          return {
+            company: line.slice(0, separator).trim(),
+            url: line.slice(separator + 1).trim(),
+          };
+        });
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
@@ -40,6 +56,7 @@ export function Owner() {
             experience: profile.experience.split('\n').filter(Boolean),
           },
           event: kind === 'text' ? { kind, text, url } : { kind, url },
+          companyWebsites: websites,
         }),
         signal: AbortSignal.timeout(180_000),
       });
@@ -192,11 +209,26 @@ export function Owner() {
             />
           </label>
         )}
+        <label>
+          Company websites (optional)
+          <textarea
+            value={companyWebsites}
+            onChange={(e) => setCompanyWebsites(e.target.value)}
+            maxLength={11000}
+            rows={3}
+            placeholder={'Company name | https://official-website.com'}
+          />
+        </label>
+        <small>
+          Use the company name shown in the result, one website per line (up to
+          five). Supplied websites are checked before job research.
+        </small>
         <p className="notice">
           This application stops at $8, preserving $2 for separate validation.
           The local ledger counts model usage conservatively; it cannot limit
-          spending elsewhere on your provider account. Search grounding is
-          disabled.
+          spending elsewhere on your provider accounts. Website discovery uses
+          up to five Brave searches per analysis; search results are reused for
+          24 hours. Official pages are checked again for current openings.
         </p>
         <button disabled={pending}>
           {pending ? 'Analyzing…' : 'Analyze event'}

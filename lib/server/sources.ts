@@ -4,6 +4,8 @@ import ipaddr from 'ipaddr.js';
 import * as cheerio from 'cheerio';
 export type SourcePage = {
   url: string;
+  title?: string;
+  siteNames?: string[];
   text: string;
   links: { label: string; url: string }[];
   jobs: unknown[];
@@ -163,6 +165,11 @@ export function parsePage(
   $('br,p,div,li,h1,h2,h3,h4,section,article').append(' ');
   return {
     url,
+    title: $('title').text().trim().slice(0, 300),
+    siteNames: $('meta[property="og:site_name"]')
+      .toArray()
+      .slice(0, 5)
+      .map((el) => ($(el).attr('content') ?? '').slice(0, 200)),
     text: $('body').text().replace(/\s+/g, ' ').trim().slice(0, 20000),
     links,
     jobs: jobs.slice(0, 20),

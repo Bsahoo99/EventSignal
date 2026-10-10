@@ -2,6 +2,7 @@ import { analyze } from '@/lib/server/analysis';
 import { Budget } from '@/lib/server/budget';
 import { geminiExtractor } from '@/lib/server/model';
 import { authorize, ownerEnabled } from '@/lib/server/access';
+import { braveSearch, SearchCache } from '@/lib/server/search';
 export const runtime = 'nodejs';
 export async function POST(request: Request) {
   if (!ownerEnabled())
@@ -54,6 +55,13 @@ export async function POST(request: Request) {
           mode: 'owner',
           credentials: !!key,
           extract: geminiExtractor(key),
+          search: process.env.BRAVE_SEARCH_API_KEY
+            ? braveSearch(process.env.BRAVE_SEARCH_API_KEY)
+            : undefined,
+          searchCache: new SearchCache(
+            process.env.EVENTSIGNAL_SEARCH_CACHE ??
+              '.local/search-cache.sqlite',
+          ),
           budget: new Budget(
             process.env.EVENTSIGNAL_LEDGER ?? '.local/budget.sqlite',
           ),

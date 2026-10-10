@@ -12,6 +12,7 @@ const event: SourcePage = {
 };
 const company: SourcePage = {
   url: 'https://acme.com',
+  title: 'Acme',
   text: 'Acme builds agents and evaluation software.',
   links: [{ label: 'Careers', url: 'https://acme.com/careers' }],
   jobs: [],

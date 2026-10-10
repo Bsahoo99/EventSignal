@@ -67,19 +67,27 @@ export class Budget {
     }
   }
   settle(id: string, usage?: ModelResponse['usage']) {
+    const valid =
+      usage &&
+      Number.isSafeInteger(usage.inputTokens) &&
+      Number.isSafeInteger(usage.outputTokens) &&
+      usage.inputTokens >= 0 &&
+      usage.outputTokens >= 0;
+    return this.record(
+      id,
+      valid
+        ? Math.ceil(usage.inputTokens * 0.25 + usage.outputTokens * 1.5)
+        : MAX_CALL_MICRO_USD,
+      !!valid,
+    );
+  }
+  settleSearch(id: string) {
+    // Brave Web Search: $5 / 1,000 requests. Never assume account credits.
+    return this.record(id, 5_000, true);
+  }
+  private record(id: string, charge: number, valid: boolean) {
     const db = this.open();
     try {
-      const valid =
-        usage &&
-        Number.isSafeInteger(usage.inputTokens) &&
-        Number.isSafeInteger(usage.outputTokens) &&
-        usage.inputTokens >= 0 &&
-        usage.outputTokens >= 0;
-      const measured = valid
-        ? Math.ceil(usage.inputTokens * 0.25 + usage.outputTokens * 1.5)
-        : MAX_CALL_MICRO_USD;
-      // Unknown outcomes remain fully charged. Unexpected usage also retains at least the full reservation.
-      const charge = valid ? measured : MAX_CALL_MICRO_USD;
       const result = db
         .prepare(
           "UPDATE charges SET charged=?,status=? WHERE id=? AND status='reserved'",

@@ -8,6 +8,8 @@ import { extractionSchema, type Extractor } from './model';
 import { Budget } from './budget';
 import { researchOpenings } from './opportunities';
 import { readPublicPage, type PageReader, type SourcePage } from './sources';
+import { ResearchLimitError, type Searcher } from './discovery';
+import { SearchCache } from './search';
 function visibleText(value: string) {
   return value
     .replace(/[\u200b\ufeff]/g, '')
@@ -29,6 +31,8 @@ export type Dependencies = {
   budget: Budget;
   now: () => string;
   readPage?: PageReader;
+  search?: Searcher;
+  searchCache?: SearchCache;
   onStage?: (stage: string) => void;
 };
 export async function analyze(
@@ -53,7 +57,7 @@ export async function analyze(
   if (!parsed.success)
     return fail(
       'invalid-input',
-      'Provide target roles, skills, experience, and 20–20,000 characters of public event text.',
+      'Check your profile and event input. Company websites must contain up to five company names with valid public HTTPS URLs; pasted event text must contain 20–20,000 characters.',
     );
   if (!deps.credentials)
     return fail(
@@ -222,6 +226,7 @@ export async function analyze(
       relationshipKind: entity.relationship,
       relationship: `Listed ${entity.relationship.replaceAll('-', ' ')}`,
       eventRole,
+      topics,
       modality,
       opportunity: { kind: 'exploratory' },
       fit: `${matched.length ? `The event evidence mentions ${matchedTopics.join(', ')}. These relate to your submitted skills (${matched.join(', ')}) and may support your interest in ${profile.roles.join(', ')}. Relevance is an interpretation.` : `The event lists this company as a hiring partner${eventRole ? ` with the role ${eventRole}` : ''}. Fit with your target roles (${profile.roles.join(', ')}) and skills is not established; use this as a lead to investigate.`}${profile.preferences ? ` Your preferences: ${profile.preferences} These have not been verified against an opening.` : ''}`,
@@ -270,12 +275,57 @@ export async function analyze(
     jobs: [],
   };
   let reads = 0;
+  let searches = 0;
+  const readCache = new Map<string, Promise<SourcePage>>();
+  const searchCache = new Map<string, ReturnType<Searcher>>();
   const researchDeadline = Date.now() + 110_000;
   const boundedRead: PageReader = async (url) => {
-    if (reads++ >= 7 || Date.now() > researchDeadline)
-      throw new Error('Research limit reached');
-    return (deps.readPage ?? readPublicPage)(url);
+    const key = new URL(url).href;
+    const cached = readCache.get(key);
+    if (cached) return cached;
+    if (reads++ >= 20 || Date.now() > researchDeadline)
+      throw new ResearchLimitError('Research limit reached');
+    const pending = (deps.readPage ?? readPublicPage)(url);
+    readCache.set(key, pending);
+    return pending;
   };
+  const boundedSearch: Searcher | undefined = deps.search
+    ? async (query) => {
+        const companyKey = (
+          query.match(/^"([^"]+)"/)?.[1] ?? query
+        ).toLowerCase();
+        const cached = searchCache.get(companyKey);
+        if (cached) return cached;
+        const stored = deps.searchCache?.get(query, Date.parse(checkedAt));
+        if (stored) {
+          const result = Promise.resolve(stored);
+          searchCache.set(companyKey, result);
+          return result;
+        }
+        if (searches++ >= 5 || Date.now() > researchDeadline)
+          throw new ResearchLimitError('Research limit reached');
+        const pending = (async () => {
+          let id: string;
+          try {
+            id = deps.budget.reserve();
+          } catch {
+            throw new ResearchLimitError('Budget limit reached');
+          }
+          let hits;
+          try {
+            hits = await deps.search!(query);
+          } catch (error) {
+            chargedUsd += deps.budget.settle(id);
+            throw error;
+          }
+          chargedUsd += deps.budget.settleSearch(id);
+          deps.searchCache?.put(query, hits, Date.parse(checkedAt));
+          return hits;
+        })();
+        searchCache.set(companyKey, pending);
+        return pending;
+      }
+    : undefined;
   for (let i = 0; i < Math.min(recommendations.length, 5); i++) {
     const researched = await researchOpenings(
       recommendations[i],
@@ -283,10 +333,24 @@ export async function analyze(
       profile,
       boundedRead,
       checkedAt,
+      {
+        search: boundedSearch,
+        website: parsed.data.companyWebsites?.find(
+          (entry) =>
+            entry.company.toLowerCase() ===
+            (
+              recommendations[i].company || recommendations[i].name
+            ).toLowerCase(),
+        )?.url,
+      },
     );
     recommendations[i] = researched.recommendation;
     evidence.push(...researched.evidence);
-    if (researched.warning) warnings.push(researched.warning);
+    if (
+      researched.recommendation.opportunity.kind === 'verified-opening' &&
+      researched.warning
+    )
+      warnings.push(researched.warning);
   }
   recommendations.sort(
     (a, b) =>
@@ -294,7 +358,7 @@ export async function analyze(
       Number(a.opportunity.kind === 'verified-opening'),
   );
   warnings.push(
-    'Research is bounded to explicit company links and readable job data. Search grounding is disabled; missing openings do not establish that a company is not hiring.',
+    'Company discovery and careers checks are bounded. Search results alone never verify an opening; no matching role found does not mean a company is not hiring.',
   );
   stage('Official source checks completed');
   stage('Brief prepared');
@@ -320,7 +384,10 @@ export async function analyze(
       saved: false,
       checkedAt,
       outcome: recommendations.length
-        ? warnings.length > 1
+        ? warnings.length > 1 ||
+          recommendations.some(
+            (rec) => rec.research?.status !== 'verified-opening',
+          )
           ? 'partial'
           : 'success'
         : 'insufficient-evidence',

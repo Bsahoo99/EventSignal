@@ -20,6 +20,12 @@ export const profileSchema = z.object({
 export type Profile = z.infer<typeof profileSchema>;
 export const inputSchema = z.object({
   profile: profileSchema,
+  companyWebsites: z
+    .array(
+      z.object({ company: z.string().trim().min(2).max(120), url: sourceUrl }),
+    )
+    .max(5)
+    .optional(),
   event: z.discriminatedUnion('kind', [
     z.object({
       kind: z.literal('text'),
@@ -59,6 +65,22 @@ export type Recommendation = {
   relationshipKind:
     'speaker' | 'host' | 'presenting-company' | 'hiring-partner';
   eventRole?: string;
+  topics?: string[];
+  research?: {
+    status:
+      | 'verified-opening'
+      | 'search-unavailable'
+      | 'site-not-found'
+      | 'site-ambiguous'
+      | 'site-unreadable'
+      | 'research-limited'
+      | 'no-matching-opening'
+      | 'careers-unreadable'
+      | 'constraints-unverified';
+    message: string;
+    website?: string;
+    checkedAt: string;
+  };
   modality: 'unknown' | 'remote' | 'in-person';
   opportunity:
     { kind: 'exploratory' } | { kind: 'verified-opening'; opening: Opening };

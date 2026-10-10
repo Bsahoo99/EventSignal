@@ -2,6 +2,7 @@ import { z } from 'zod';
 import * as cheerio from 'cheerio';
 import type { Profile, Recommendation, Evidence } from '../contracts';
 import type { SourcePage, PageReader } from './sources';
+import { discoverCompany, type Searcher } from './discovery';
 const jobSchema = z.object({
   title: z.string().min(1).max(200),
   hiringOrganization: z.object({ name: z.string() }),
@@ -35,18 +36,6 @@ function roleClosed(page: SourcePage, title: string) {
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, '');
 const plain = (value: string) =>
   cheerio.load(value).text().replace(/\s+/g, ' ').trim();
-function companyLink(page: SourcePage, company: string) {
-  return page.links.find((link) => {
-    try {
-      return (
-        normalize(link.label).includes(normalize(company)) &&
-        normalize(host(link.url).split('.')[0]) === normalize(company)
-      );
-    } catch {
-      return false;
-    }
-  });
-}
 function trustedCareerLink(
   link: { label: string; url: string },
   companyHost: string,
@@ -75,6 +64,7 @@ export async function researchOpenings(
   profile: Profile,
   read: PageReader,
   checkedAt: string,
+  options: { search?: Searcher; website?: string } = {},
 ): Promise<{
   recommendation: Recommendation;
   evidence: Evidence[];
@@ -86,18 +76,26 @@ export async function researchOpenings(
     rec.relationshipKind === 'hiring-partner'
       ? rec.name
       : '');
-  const link = company && companyLink(event, company);
-  if (!company || !link)
+  const selection = await discoverCompany(
+    rec,
+    event,
+    read,
+    options.search,
+    options.website,
+  );
+  if (!('page' in selection))
     return {
-      recommendation: rec,
+      recommendation: { ...rec, research: { ...selection, checkedAt } },
       evidence: [],
-      warning: `${rec.name}: no unambiguous official company link was available for job research.`,
+      warning: `${rec.name}: ${selection.message}`,
     };
+  const home = selection.page;
+  const research = (
+    status: NonNullable<Recommendation['research']>['status'],
+    message: string,
+  ) => ({ status, message, website: home.url, checkedAt });
   const evidence: Evidence[] = [];
   try {
-    const home = await read(link.url);
-    if (host(home.url) !== host(link.url))
-      throw new Error('Company redirected outside its established domain.');
     const context = home.text
       .split(/(?<=[.!?])\s+/)
       .find(
@@ -187,6 +185,10 @@ export async function researchOpenings(
           return {
             recommendation: {
               ...rec,
+              research: research(
+                'constraints-unverified',
+                'An official role was found. Check your hard constraints before treating it as a match.',
+              ),
               evidence: [...rec.evidence, ...evidence],
               uncertainties: [
                 ...rec.uncertainties,
@@ -199,6 +201,10 @@ export async function researchOpenings(
         return {
           recommendation: {
             ...rec,
+            research: research(
+              'verified-opening',
+              'Matching role found on an official company or company-linked careers page. Check the dated source before applying.',
+            ),
             opportunity: {
               kind: 'verified-opening',
               opening: {
@@ -233,13 +239,29 @@ export async function researchOpenings(
       }
     }
     return {
-      recommendation: { ...rec, evidence: [...rec.evidence, ...evidence] },
+      recommendation: {
+        ...rec,
+        research: research(
+          incomplete ? 'careers-unreadable' : 'no-matching-opening',
+          incomplete
+            ? 'Some careers pages could not be read. Open the company website to check current roles manually.'
+            : 'Company pages checked; no supported matching opening found in this limited search. Check the website for additional roles.',
+        ),
+        evidence: [...rec.evidence, ...evidence],
+      },
       evidence,
       warning: `${company}: no supported matching opening found in the bounded pages checked. This does not mean the company is not hiring.`,
     };
   } catch {
     return {
-      recommendation: { ...rec, evidence: [...rec.evidence, ...evidence] },
+      recommendation: {
+        ...rec,
+        research: research(
+          'careers-unreadable',
+          'Company website identified, but job verification could not finish. Open the website to check its careers page.',
+        ),
+        evidence: [...rec.evidence, ...evidence],
+      },
       evidence,
       warning: `${company}: some official pages could not be read or the source limit was reached. Job verification is incomplete.`,
     };

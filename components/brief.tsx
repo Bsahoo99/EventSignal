@@ -92,6 +92,24 @@ export function Brief({ brief }: { brief: BriefData }) {
             <h3>{rec.name}</h3>
             {rec.company && <p className="company">{rec.company}</p>}
             <p>{rec.relationship}</p>
+            {rec.research && (
+              <section
+                aria-label={`Company research for ${rec.name}`}
+                className="notice"
+              >
+                <h4>Company &amp; job research</h4>
+                <p>{rec.research.message}</p>
+                {rec.research.website && (
+                  <a
+                    href={rec.research.website}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open company website ↗
+                  </a>
+                )}
+              </section>
+            )}
             {rec.eventRole && (
               <p>
                 <strong>Event-listed role:</strong> {rec.eventRole}. Current
