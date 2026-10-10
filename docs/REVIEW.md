@@ -56,3 +56,17 @@ Reviewer recheck: zero unresolved findings; no scope-creep findings. Original wo
 **Discovery review totals: Standards 2 found / 2 fixed; Spec 2 found / 2 fixed. Zero unresolved findings on either axis.**
 
 Both reviewers additionally cleared the bounded HTML allowance change after the live source checks. Final checks: 44 automated tests, TypeScript, public production build, formatting, and diff checks passed.
+
+# Tavily migration review — October 10, 2026
+
+Baseline: `f9732fd`; implementation: `2c1f6c0`. Spec: [tavily-search.md](tavily-search.md). Independent reviewers inspected the committed change, then rechecked the documentation correction.
+
+## Standards
+
+One documentation finding: README's cache/budget bullet retained the old $0.005 rate. **Fixed:** it now consistently states $0.008 per completed Basic search. No implementation violations or actionable baseline smells found. Recheck: zero unresolved findings.
+
+## Spec
+
+One documentation finding: the same old price contradicted the requested Tavily accounting and owner guidance. **Fixed:** $0.008 is consistent across code, spec, and README. No runtime or scope-creep findings. Recheck: zero unresolved findings.
+
+**Migration totals: Standards 1 found / 1 fixed; Spec 1 found / 1 fixed. Zero unresolved findings on either axis.** Validation: 44 automated tests, TypeScript, public build, formatting, and diff checks passed. Live Tavily validation awaits the user's key; fixture tests made no paid requests.

@@ -24,12 +24,12 @@ The browser suite checks desktop/mobile public briefs, disclosures and evidence 
 
 - **Provider access and integration: confirmed October 10, 2026.** After the user configured the key locally, the official model endpoint confirmed account access. One synthetic event was submitted through the real owner HTTP API. Structured output was accepted, one exploratory recommendation returned, and the durable ledger reconciled the request to an estimated $0.00025. See [provider-smoke.json](evaluation/provider-smoke.json). This establishes integration, not real-event matching quality.
 - **Real-source end-to-end quality: limited checks completed October 10.** The Heavyweights event was analyzed through the owner UI with Gemini and now returns Baseten, Ankur Goyal, and Corinne Riley as exploratory connections. A captured real-provider response for the Talent Hunt was replayed through the repaired coordinator and returns five hiring partners with event-listed roles. These checks exposed and repaired narrow relationship keywords, terminology mismatches, and invisible-formatting rejection. They do not establish general model quality or real job-verification quality. See [event-relationship-fix.md](event-relationship-fix.md).
-- Discovery is bounded to event links, owner-supplied sites, or up to five Brave searches with identity checks. Automatic job verification supports readable JSON-LD plus visible title, not arbitrary career-page formats. Company aliases, complex identity relationships, semantic contradictions, and eligibility decisions need manual source review.
+- Discovery is bounded to event links, owner-supplied sites, or up to five Tavily Basic searches with identity checks. Automatic job verification supports readable JSON-LD plus visible title, not arbitrary career-page formats. Company aliases, complex identity relationships, semantic contradictions, and eligibility decisions need manual source review.
 - The initial profile contains only the selected summary in the PRD. Original resume/project records were unavailable in this workspace; enter exact project evidence in the editor before relying on personalized introductions.
 - The $2 validation reserve is not enabled. The development ceiling stays $8. No total account-spend guarantee is made.
 - Hosting is unconfigured. A production build is available; the site has not been published.
 
-The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Gemini grounding remains disabled; optional bounded Brave discovery is implemented, with live Brave validation blocked by an invalid subscription token. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
+The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Gemini grounding remains disabled; optional bounded Tavily Basic discovery is implemented, with live Tavily validation pending its key. The earlier Brave invalid-token attempt remains recorded below. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
 
 ## Final verification record
 
@@ -51,3 +51,10 @@ The initial live synthetic-input run recorded **$0.00025**. Subsequent user even
 - New UI browser inspection was blocked by browser URL policy. Earlier browser-suite results above apply to the earlier implementation, not this new field/status display. No alternate browser surface was used to bypass the block.
 
 Final discovery verification: **44 automated tests passed**, TypeScript passed, public production build passed, formatting and diff checks passed. Independent Standards and Spec rechecks each reported zero unresolved findings.
+
+
+## Tavily migration validation — October 10, 2026
+
+The owner selected Tavily after the Brave token failed validation. Runtime search now uses Tavily Basic exclusively with TAVILY_API_KEY. Basic depth and auto_parameters=false fix the request at one credit; generated answers, raw content, and images are disabled. The durable ledger conservatively accounts $0.008 per completed search, without assuming free credits, and preserves all earlier charges. Tavily cache keys isolate old Brave results.
+
+All **44 automated tests**, TypeScript, public production build, formatting, and diff checks passed. Existing application-boundary tests now exercise the Tavily HTTP contract, one-credit parameters, snippet-only evidence, failure reservations, and provider cache isolation. These are controlled fixtures with no paid requests. The key was absent at the final configuration check; **live Tavily validation remains pending**. No new browser validation is claimed.
