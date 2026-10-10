@@ -82,8 +82,8 @@ export class Budget {
     );
   }
   settleSearch(id: string) {
-    // Brave Web Search: $5 / 1,000 requests. Never assume account credits.
-    return this.record(id, 5_000, true);
+    // Tavily Basic: one credit at $0.008 PAYG. Never assume account credits.
+    return this.record(id, 8_000, true);
   }
   private record(id: string, charge: number, valid: boolean) {
     const db = this.open();

@@ -227,7 +227,7 @@ export function Owner() {
           This application stops at $8, preserving $2 for separate validation.
           The local ledger counts model usage conservatively; it cannot limit
           spending elsewhere on your provider accounts. Website discovery uses
-          up to five Brave searches per analysis; search results are reused for
+          up to five Tavily searches per analysis; search results are reused for
           24 hours. Official pages are checked again for current openings.
         </p>
         <button disabled={pending}>

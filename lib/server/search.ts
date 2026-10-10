@@ -13,19 +13,27 @@ const hitsSchema = z
   )
   .max(5);
 
-export function braveSearch(key: string): Searcher {
+export function tavilySearch(key: string): Searcher {
   return async (query) => {
     if (!key || query.length > 400)
       throw new Error('Search configuration or query invalid');
-    const url = new URL('https://api.search.brave.com/res/v1/web/search');
-    url.search = new URLSearchParams({
-      q: query,
-      count: '5',
-      result_filter: 'web',
-      spellcheck: 'false',
-    }).toString();
-    const response = await fetch(url, {
-      headers: { accept: 'application/json', 'X-Subscription-Token': key },
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        query,
+        search_depth: 'basic',
+        auto_parameters: false,
+        max_results: 5,
+        topic: 'general',
+        include_answer: false,
+        include_raw_content: false,
+        include_images: false,
+      }),
       redirect: 'error',
       signal: AbortSignal.timeout(8000),
     });
@@ -47,26 +55,22 @@ export function braveSearch(key: string): Searcher {
       await reader.cancel();
     }
     const schema = z.object({
-      web: z
-        .object({
-          results: z
-            .array(
-              z.object({
-                title: z.string(),
-                url: z.url(),
-                description: z.string().optional(),
-              }),
-            )
-            .max(20),
-        })
-        .optional(),
+      results: z
+        .array(
+          z.object({
+            title: z.string(),
+            url: z.url(),
+            content: z.string().optional(),
+          }),
+        )
+        .max(20),
     });
     const result = schema.parse(JSON.parse(Buffer.concat(chunks).toString()));
     return hitsSchema.parse(
-      (result.web?.results ?? []).slice(0, 5).map((hit) => ({
+      result.results.slice(0, 5).map((hit) => ({
         title: hit.title.slice(0, 500),
         url: hit.url,
-        description: (hit.description ?? '').slice(0, 2000),
+        description: (hit.content ?? '').slice(0, 2000),
       })),
     );
   };

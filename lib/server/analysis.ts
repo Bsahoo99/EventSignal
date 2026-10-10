@@ -296,7 +296,8 @@ export async function analyze(
         ).toLowerCase();
         const cached = searchCache.get(companyKey);
         if (cached) return cached;
-        const stored = deps.searchCache?.get(query, Date.parse(checkedAt));
+        const cacheKey = `tavily:basic:v1:${query}`;
+        const stored = deps.searchCache?.get(cacheKey, Date.parse(checkedAt));
         if (stored) {
           const result = Promise.resolve(stored);
           searchCache.set(companyKey, result);
@@ -319,7 +320,7 @@ export async function analyze(
             throw error;
           }
           chargedUsd += deps.budget.settleSearch(id);
-          deps.searchCache?.put(query, hits, Date.parse(checkedAt));
+          deps.searchCache?.put(cacheKey, hits, Date.parse(checkedAt));
           return hits;
         })();
         searchCache.set(companyKey, pending);
@@ -364,7 +365,7 @@ export async function analyze(
   stage('Brief prepared');
   return {
     ok: true,
-    chargedUsd,
+    chargedUsd: Math.round(chargedUsd * 1_000_000) / 1_000_000,
     stages,
     brief: {
       event: source.includes(extraction.eventName)

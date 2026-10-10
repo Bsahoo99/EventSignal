@@ -6,7 +6,7 @@ import { createTestDependencies, eventText } from './fixtures';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { SearchCache, braveSearch } from '../lib/server/search';
+import { SearchCache, tavilySearch } from '../lib/server/search';
 import { ResearchLimitError } from '../lib/server/discovery';
 test('discovery matches the registered company domain, not an unrelated subdomain', async () => {
   for (const [url, expected] of [
@@ -134,8 +134,8 @@ test('the existing budget cap stops discovery and expired searches are charged a
     now: () => '2026-10-11T05:00:01.000Z',
   });
   assert.equal(expired.ok, true);
-  if (expired.ok) assert.equal(expired.chargedUsd, 0.006);
-  assert.equal(cachedDeps.budget.total(), 0.012);
+  if (expired.ok) assert.equal(expired.chargedUsd, 0.009);
+  assert.equal(cachedDeps.budget.total(), 0.018);
 });
 test('similarly named or multiple plausible companies remain ambiguous', async () => {
   for (const scenario of ['different-name', 'multiple'] as const) {
@@ -169,25 +169,36 @@ test('similarly named or multiple plausible companies remain ambiguous', async (
     );
   }
 });
-test('Brave search snippets are discovery only and failed requests retain their reservation', async (t) => {
+test('Tavily basic search uses one-credit settings and snippets cannot verify openings', async (t) => {
   const original = globalThis.fetch;
   t.after(() => {
     globalThis.fetch = original;
   });
-  globalThis.fetch = async () =>
-    Response.json({
-      web: {
-        results: [
-          {
-            title: 'Acme careers',
-            url: 'https://acme.com/careers',
-            description: 'Applied AI Engineer — apply now',
-          },
-        ],
-      },
+  globalThis.fetch = async (url, options) => {
+    assert.equal(String(url), 'https://api.tavily.com/search');
+    assert.equal(options?.method, 'POST');
+    assert.equal(
+      new Headers(options?.headers).get('authorization'),
+      'Bearer fixture-search-key',
+    );
+    const body = JSON.parse(String(options?.body));
+    assert.equal(body.search_depth, 'basic');
+    assert.equal(body.auto_parameters, false);
+    assert.equal(body.max_results, 5);
+    assert.equal(body.include_answer, false);
+    assert.equal(body.include_raw_content, false);
+    return Response.json({
+      results: [
+        {
+          title: 'Acme careers',
+          url: 'https://acme.com/careers',
+          content: 'Applied AI Engineer — apply now',
+        },
+      ],
     });
+  };
   const deps = createTestDependencies({
-    search: braveSearch('fixture-search-key'),
+    search: tavilySearch('fixture-search-key'),
     readPage: async (url) => ({
       url,
       title: 'Acme',
@@ -203,6 +214,7 @@ test('Brave search snippets are discovery only and failed requests retain their 
   const first = await analyze(input, deps);
   assert.equal(first.ok, true);
   if (!first.ok) return;
+  assert.equal(first.chargedUsd, 0.009);
   assert.equal(first.brief.recommendations[0].opportunity.kind, 'exploratory');
   assert.equal(
     first.brief.recommendations[0].research?.status,
@@ -219,7 +231,7 @@ test('Brave search snippets are discovery only and failed requests retain their 
     'search-unavailable',
   );
   assert.equal(failed.chargedUsd, 0.101);
-  assert.equal(deps.budget.total(), 0.107);
+  assert.equal(deps.budget.total(), 0.11);
 });
 test('the owner can supply a website when search is unavailable without inventing an opening', async () => {
   const result = await analyze(
@@ -260,6 +272,12 @@ test('cached discovery avoids another search charge but official pages are check
     profile: initialProfile,
     event: { kind: 'text', text: eventText },
   };
+  // A previous provider's cached empty result must not suppress Tavily discovery.
+  cache.put(
+    '"Acme" official company website careers agents evaluation customer deployments',
+    [],
+    Date.parse('2026-10-10T05:00:00.000Z'),
+  );
   const deps = createTestDependencies({
     searchCache: cache,
     search: async () => [
@@ -279,6 +297,7 @@ test('cached discovery avoids another search charge but official pages are check
   });
   const first = await analyze(input, deps);
   assert.equal(first.ok, true);
+  if (first.ok) assert.equal(first.chargedUsd, 0.009);
   const second = await analyze(input, {
     ...deps,
     search: async () => {
@@ -296,7 +315,7 @@ test('cached discovery avoids another search charge but official pages are check
     'site-unreadable',
   );
   assert.equal(second.brief.recommendations[0].opportunity.kind, 'exploratory');
-  assert.equal(deps.budget.total(), 0.007);
+  assert.equal(deps.budget.total(), 0.01);
 });
 
 test('a missing event link can be discovered and verified using official pages, not search claims', async () => {
@@ -343,5 +362,5 @@ test('a missing event link can be discovered and verified using official pages, 
   assert.equal(rec.research?.status, 'verified-opening');
   assert.equal(rec.research?.website, 'https://acme.com/');
   assert.ok(rec.evidence.some((e) => e.kind === 'company-page'));
-  assert.equal(result.chargedUsd, 0.006);
+  assert.equal(result.chargedUsd, 0.009);
 });

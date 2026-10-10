@@ -117,7 +117,7 @@ export async function discoverCompany(
   if (!search)
     return {
       status: 'search-unavailable',
-      message: `Website discovery is unavailable. Configure BRAVE_SEARCH_API_KEY on the local server, or add ${company}'s official URL under Company websites.`,
+      message: `Website discovery is unavailable. Configure TAVILY_API_KEY on the local server, or add ${company}'s official URL under Company websites.`,
     };
   let hits: SearchHit[];
   try {
@@ -137,7 +137,7 @@ export async function discoverCompany(
       message:
         error instanceof ResearchLimitError
           ? `Research stopped at the time, request, or budget limit. ${manual}`
-          : `Website search failed. Check the Brave key/quota, or supply the official company URL.`,
+          : `Website search failed. Check the Tavily key/quota, or supply the official company URL.`,
     };
   }
   const candidates = new Map<string, string>();
