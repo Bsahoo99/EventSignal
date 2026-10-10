@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-10T23:56:21.521Z",
+  "keyValidation": {
+    "checkedAt": "2026-10-10T23:56:02.670Z",
+    "ok": true,
+    "httpStatus": 200,
+    "resultCount": 5,
+    "chargedUsd": 0.008
+  },
+  "eventUrl": "https://luma.com/yjt7f4ty",
+  "ownerHttpStatus": 200,
+  "analysisOk": true,
+  "analysisLedgerChargeUsd": 0.017484,
+  "recommendations": [
+    {
+      "name": "Creao AI",
+      "researchStatus": "site-ambiguous",
+      "opportunity": "exploratory"
+    },
+    {
+      "name": "WH Group",
+      "researchStatus": "site-unreadable",
+      "opportunity": "exploratory"
+    }
+  ],
+  "warnings": [
+    "Excluded TinyFish: relationship or identity was not established unambiguously.",
+    "Excluded Cresta: relationship or identity was not established unambiguously.",
+    "Excluded Zingage: relationship or identity was not established unambiguously.",
+    "Company discovery and careers checks are bounded. Search results alone never verify an opening; no matching role found does not mean a company is not hiring."
+  ],
+  "note": "Tavily authentication and search succeeded. Event extraction and company verification remain partial; no verified job opening was established. Ledger figures conservatively use paid rates regardless of free credits and are not provider billing."
+}

@@ -29,7 +29,7 @@ The browser suite checks desktop/mobile public briefs, disclosures and evidence 
 - The $2 validation reserve is not enabled. The development ceiling stays $8. No total account-spend guarantee is made.
 - Hosting is unconfigured. A production build is available; the site has not been published.
 
-The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Gemini grounding remains disabled; optional bounded Tavily Basic discovery is implemented, with live Tavily validation pending its key. The earlier Brave invalid-token attempt remains recorded below. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
+The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Gemini grounding remains disabled; optional bounded Tavily Basic discovery is implemented, with live Tavily authentication and search confirmed; company matching remains partial. The earlier Brave invalid-token attempt remains recorded below. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
 
 ## Final verification record
 
@@ -57,4 +57,11 @@ Final discovery verification: **44 automated tests passed**, TypeScript passed, 
 
 The owner selected Tavily after the Brave token failed validation. Runtime search now uses Tavily Basic exclusively with TAVILY_API_KEY. Basic depth and auto_parameters=false fix the request at one credit; generated answers, raw content, and images are disabled. The durable ledger conservatively accounts $0.008 per completed search, without assuming free credits, and preserves all earlier charges. Tavily cache keys isolate old Brave results.
 
-All **44 automated tests**, TypeScript, public production build, formatting, and diff checks passed. Existing application-boundary tests now exercise the Tavily HTTP contract, one-credit parameters, snippet-only evidence, failure reservations, and provider cache isolation. These are controlled fixtures with no paid requests. The key was absent at the final configuration check; **live Tavily validation remains pending**. No new browser validation is claimed.
+All **44 automated tests**, TypeScript, public production build, formatting, and diff checks passed. Existing application-boundary tests now exercise the Tavily HTTP contract, one-credit parameters, snippet-only evidence, failure reservations, and provider cache isolation. These are controlled fixtures with no paid requests. At migration completion the key was absent. The subsequent live validation below supersedes that pending status. No new browser validation is claimed.
+
+
+### Live Tavily validation after key setup
+
+On October 10, Tavily returned HTTP 200 and five search results for one bounded Cresta query. A subsequent Talent Hunt analysis through the real owner HTTP API also returned HTTP 200. Creao AI remained identity-ambiguous and WH Group had an unreadable candidate site; Gemini excluded TinyFish, Cresta, and Zingage as ambiguous in this run. This confirms provider integration, not reliable event extraction or verified openings. See [tavily-smoke.json](evaluation/tavily-smoke.json).
+
+The initial Basic search recorded $0.008 in the existing ledger; the event analysis recorded $0.017484. These conservative estimates do not assert provider billing or free-credit consumption. No credentials or private profile content are in the published validation record.
