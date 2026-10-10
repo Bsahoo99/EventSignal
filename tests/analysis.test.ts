@@ -1,9 +1,45 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyze } from '../lib/server/analysis';
+import { parsePage } from '../lib/server/sources';
 import { initialProfile } from '../lib/profile';
 import type { Recommendation } from '../lib/contracts';
 import { createTestDependencies, eventText } from './fixtures';
+test('hiring partners do not inherit roles or skills from neighboring company entries', async () => {
+  const quote =
+    'Hiring partners: Acme: Product Designer. Super Acme: Applied AI Engineer. Other: agents and evaluation Engineer.';
+  const result = await analyze(
+    { profile: initialProfile, event: { kind: 'text', text: quote } },
+    createTestDependencies({
+      extract: async () => ({
+        data: {
+          eventName: 'Hiring partners',
+          eventDate: '',
+          historical: false,
+          entities: [
+            {
+              name: 'Acme',
+              company: 'Acme',
+              relationship: 'hiring-partner',
+              eventRole: 'Applied AI Engineer',
+              quote,
+              topics: ['agents', 'evaluation'],
+              modality: 'unknown',
+              historical: false,
+              ambiguous: false,
+            },
+          ],
+        },
+      }),
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  const rec = result.brief.recommendations[0];
+  assert.equal(rec.eventRole, undefined);
+  assert.match(rec.fit, /fit.*not.*established/i);
+  assert.doesNotMatch(rec.fit, /These relate to your submitted skills/);
+});
 test('invisible formatting on a public page does not erase a supported hiring partner', async () => {
   const quote =
     'The works and hiring partners Engineering Track Cresta: Senior Machine Learning Engineer';
@@ -151,12 +187,11 @@ test('event hiring partners retain listed roles as exploratory leads without inv
       event: { kind: 'url', url: 'https://luma.com/yjt7f4ty' },
     },
     createTestDependencies({
-      readPage: async () => ({
-        url: 'https://luma.com/yjt7f4ty',
-        text,
-        links: [],
-        jobs: [],
-      }),
+      readPage: async () =>
+        parsePage(
+          '<h1>The AI-Native Talent Hunt.</h1><h2>The works and hiring partners</h2><p>Product Track</p><ul><li>Creao AI: AI-Native Product Designer</li><li>WH Group: Global Solution Manager</li></ul><p>Marketing Track</p><ul><li>TinyFish: Founding DevRel &amp; Product Marketing Manager</li></ul><p>Engineering Track</p><ul><li>Cresta: Senior Machine Learning Engineer</li><li>Zingage: Deployment Strategist &amp; Customer Operations Each work is a real problem from that company.</li></ul>',
+          'https://luma.com/yjt7f4ty',
+        ),
       extract: async () => ({
         data: {
           eventName: 'The AI-Native Talent Hunt',

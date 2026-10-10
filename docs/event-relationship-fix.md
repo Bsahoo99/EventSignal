@@ -18,7 +18,8 @@ Review baseline: `078902f8416ead75f774995e5c04bad1d4ad7e2a`, the clean commit im
 
 ## Validation
 
-- 33 automated workflow/invariant checks passed; TypeScript, public production build, formatting, and whitespace checks passed.
+- 34 automated workflow/invariant checks passed; TypeScript, public production build, formatting, and whitespace checks passed.
 - Heavyweights was submitted through the actual owner UI with Gemini. The final result shows Baseten, Ankur Goyal, and Corinne Riley, all exploratory, with supported agents/evals relevance. The page lacks unambiguous official company links, so job research remains incomplete. The final displayed request cost was $0.0009 (rounded by the UI).
-- A captured real Gemini response for the Talent Hunt exposed invisible zero-width characters in the source that the model omitted from its quotes. Replaying that exact response through the fixed coordinator returns all five hiring partners with correctly attributed role titles. This replay used a temporary test ledger and made no further paid call. It is not a claim of fresh live job verification.
+- A captured real Gemini response for the Talent Hunt exposed invisible zero-width characters in the source that the model omitted from its quotes. A subsequent live run returned all five hiring partners with their event-listed role titles ($0.001573 recorded). The final attribution refinement preserves HTML paragraph/list boundaries and was verified using the freshly fetched page and captured provider response; all five titles remain supported. This replay used a temporary test ledger and made no further paid call. It is not a claim of live job verification.
+- Role attribution uses the start of a complete paragraph/list entry rather than a company-name substring. Where pasted text lacks clear entry boundaries, the role is omitted conservatively while the exploratory relationship remains. Hiring-partner skill evidence is limited to that company's validated role.
 - The named roles remain event claims. No independently verified opening, eligibility, attendance, or referral willingness was established by these checks.

@@ -74,6 +74,14 @@ export async function analyze(
   }
   const source = page?.text ?? (event.kind === 'text' ? event.text : '');
   const visibleSource = visibleText(source);
+  const eventEntries = (
+    page?.entries ?? source.split(/\n|;|(?<=[.!?])\s+/)
+  ).map((entry) =>
+    visibleText(entry).replace(
+      /^(?:the works and )?hiring[ -]partners?\s*:\s*/i,
+      '',
+    ),
+  );
   stage(page ? 'Public event page read' : 'Event text received');
   let reservation: string;
   try {
@@ -134,8 +142,29 @@ export async function analyze(
       );
       continue;
     }
+    const hiringPartner = entity.relationship === 'hiring-partner';
+    const escapePattern = (value: string) =>
+      value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const listedRole = entity.eventRole;
+    const eventRole =
+      hiringPartner &&
+      listedRole &&
+      quote.includes(listedRole.toLowerCase()) &&
+      eventEntries.some(
+        (entry) =>
+          visibleSource.includes(entry) &&
+          new RegExp(
+            `^${escapePattern(entity.name)}\\s*[:–—-]\\s*${escapePattern(listedRole)}(?=$|[\\s.,;])`,
+            'i',
+          ).test(entry),
+      )
+        ? listedRole
+        : undefined;
+    const topicEvidence = hiringPartner
+      ? (eventRole ?? '').toLowerCase()
+      : quote;
     const topics = entity.topics.filter((topic) =>
-      quote.includes(topic.toLowerCase()),
+      topicEvidence.includes(topic.toLowerCase()),
     );
     const matches = profile.skills.flatMap((skill) => {
       const topic = topics.find(
@@ -147,19 +176,7 @@ export async function analyze(
     });
     const matched = matches.map((match) => match.skill);
     const matchedTopics = [...new Set(matches.map((match) => match.topic))];
-    const hiringPartner = entity.relationship === 'hiring-partner';
     if (!matched.length && !hiringPartner) continue;
-    const escapePattern = (value: string) =>
-      value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const eventRole =
-      hiringPartner &&
-      entity.eventRole &&
-      new RegExp(
-        `${escapePattern(entity.name)}\\s*[:–—-]\\s*${escapePattern(entity.eventRole)}(?=$|[\\s.,;])`,
-        'i',
-      ).test(visibleText(entity.quote))
-        ? entity.eventRole
-        : undefined;
     const discussionTopic =
       matchedTopics[0] ?? eventRole ?? 'the event challenge';
     const experience =

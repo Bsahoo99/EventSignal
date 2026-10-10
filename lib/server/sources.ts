@@ -7,6 +7,7 @@ export type SourcePage = {
   text: string;
   links: { label: string; url: string }[];
   jobs: unknown[];
+  entries?: string[];
 };
 export type PageReader = (url: string) => Promise<SourcePage>;
 export function validateDestination(raw: string) {
@@ -154,12 +155,18 @@ export function parsePage(
     } catch {}
   });
   $('script,style,noscript,iframe,svg,form').remove();
+  const entries = $('li,p')
+    .toArray()
+    .map((el) => $(el).text().replace(/\s+/g, ' ').trim())
+    .filter((text) => text.length > 0 && text.length <= 1200)
+    .slice(0, 200);
   $('br,p,div,li,h1,h2,h3,h4,section,article').append(' ');
   return {
     url,
     text: $('body').text().replace(/\s+/g, ' ').trim().slice(0, 20000),
     links,
     jobs: jobs.slice(0, 20),
+    entries,
   };
 }
 export function createPageReader(

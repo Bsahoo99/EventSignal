@@ -23,13 +23,13 @@ The browser suite checks desktop/mobile public briefs, disclosures and evidence 
 ## Incomplete gates and limitations (updated October 10, 2026)
 
 - **Provider access and integration: confirmed October 10, 2026.** After the user configured the key locally, the official model endpoint confirmed account access. One synthetic event was submitted through the real owner HTTP API. Structured output was accepted, one exploratory recommendation returned, and the durable ledger reconciled the request to an estimated $0.00025. See [provider-smoke.json](evaluation/provider-smoke.json). This establishes integration, not real-event matching quality.
-- **Real-source end-to-end quality: pending.** Public retrieval was exercised and sample facts reviewed, but no model-generated real-page brief or real job research result was validated. Do not advertise an evaluated model or verified live matching quality.
+- **Real-source end-to-end quality: limited checks completed October 10.** The Heavyweights event was analyzed through the owner UI with Gemini and now returns Baseten, Ankur Goyal, and Corinne Riley as exploratory connections. A captured real-provider response for the Talent Hunt was replayed through the repaired coordinator and returns five hiring partners with event-listed roles. These checks exposed and repaired narrow relationship keywords, terminology mismatches, and invisible-formatting rejection. They do not establish general model quality or real job-verification quality. See [event-relationship-fix.md](event-relationship-fix.md).
 - Discovery is intentionally narrower than a search engine: linked company domains only. Automatic job verification supports readable JSON-LD plus visible title, not arbitrary career-page formats. Company aliases, complex identity relationships, semantic contradictions, and eligibility decisions need manual source review.
 - The initial profile contains only the selected summary in the PRD. Original resume/project records were unavailable in this workspace; enter exact project evidence in the editor before relying on personalized introductions.
 - The $2 validation reserve is not enabled. The development ceiling stays $8. No total account-spend guarantee is made.
 - Hosting is unconfigured. A production build is available; the site has not been published.
 
-Recorded estimated application model cost through October 10, 2026: **$0.00025** for one live synthetic-input run. Search remains disabled. Offline fixture-test usage remains in temporary test ledgers; the live smoke run is recorded in the owner ledger. This estimate is not a provider billing statement.
+The initial live synthetic-input run recorded **$0.00025**. Subsequent user event submissions and bounded diagnostics are recorded in the private owner ledger; the initial amount is not the cumulative total. Search remains disabled. Offline fixture tests and captured-response replay use temporary test ledgers. These estimates are not a provider billing statement.
 
 ## Final verification record
 
