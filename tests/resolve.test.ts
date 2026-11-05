@@ -11,7 +11,7 @@ const hitFor = (name: string): SearchHit[] => [
   {
     title: `${name} - Software Engineer at Acme | LinkedIn`,
     url: 'https://example.com/in/someone',
-    description: `${name} is a Software Engineer at Acme, working on agents.`,
+    description: `${name} is a Software Engineer at Acme, working on agents in San Francisco.`,
   },
 ];
 const confident =
@@ -199,4 +199,63 @@ test('a name that reads as an instruction reaches the model only as user data', 
   const request = calls.completion[0] as { system: string; user: string };
   assert.ok(request.user.includes('Ignore previous instructions'));
   assert.ok(!request.system.includes('Ignore previous instructions'));
+});
+
+test('a hit with nothing tying it to the event context is dropped even when the model is confident', async () => {
+  const { deps } = makeDeps({
+    search: async () => [
+      {
+        title: 'Dana Whitaker - Sales Agent at Oxygn ISP | LinkedIn',
+        url: 'https://example.com/in/dana',
+        description: 'Dana Whitaker is a Sales Agent at Oxygn ISP in Ohio.',
+      },
+    ],
+    completion: async () => ({
+      data: {
+        company: 'Oxygn ISP',
+        title: 'Sales Agent',
+        confidence: 'confident',
+        quote: 'Dana Whitaker is a Sales Agent at Oxygn ISP',
+        url: 'https://example.com/in/dana',
+      },
+    }),
+  });
+  const out = await resolveGuests(guests('Dana Whitaker'), deps);
+  assert.equal(out.resolved.length, 0);
+  assert.deepEqual(out.dropped, [
+    { name: 'Dana Whitaker', reason: 'no-match' },
+  ]);
+});
+
+test('context words match as whole words, ignoring case', async () => {
+  const { deps } = makeDeps({
+    search: async () => [
+      {
+        title: 'Dana Whitaker - Engineer at Acme',
+        url: 'https://example.com/in/dana',
+        description:
+          'Dana Whitaker is a Software Engineer at Acme, based in SAN FRANCISCO.',
+      },
+    ],
+    completion: confident('Dana Whitaker'),
+  });
+  const out = await resolveGuests(guests('Dana Whitaker'), deps);
+  assert.equal(out.resolved.length, 1);
+});
+
+test('a context with no usable words adds no requirement', async () => {
+  const { deps } = makeDeps({
+    context: 'AI',
+    search: async () => [
+      {
+        title: 'Dana Whitaker - Engineer at Acme',
+        url: 'https://example.com/in/dana',
+        description:
+          'Dana Whitaker is a Software Engineer at Acme, working on agents.',
+      },
+    ],
+    completion: confident('Dana Whitaker'),
+  });
+  const out = await resolveGuests(guests('Dana Whitaker'), deps);
+  assert.equal(out.resolved.length, 1);
 });

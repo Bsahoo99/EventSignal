@@ -42,6 +42,16 @@ const SYSTEM =
 
 const squash = (value: string) =>
   value.replace(/\s+/g, ' ').trim().toLowerCase();
+// A name match alone cannot tell two people apart. Require the matching
+// result to mention a word from the event context (its city or topic) so a
+// stranger with the same name in another place or field is not accepted.
+const contextTerms = (context: string) =>
+  [...new Set(context.toLowerCase().split(/[^a-z0-9]+/))].filter(
+    (term) => term.length >= 4,
+  );
+const mentionsContext = (text: string, terms: string[]) =>
+  terms.length === 0 ||
+  terms.some((term) => new RegExp(`\\b${term}\\b`, 'i').test(text));
 const searchable = (name: string) => {
   const words = name.split(/\s+/).filter(Boolean);
   return words.length >= 2 && words.every((word) => word.length >= 2);
@@ -142,9 +152,15 @@ export async function resolveGuests(
       }
       const answer = parsed.data;
       const quote = squash(answer.quote);
-      const grounded = hits.some((hit) =>
+      const grounding = hits.find((hit) =>
         squash(`${hit.title} ${hit.description}`).includes(quote),
       );
+      const grounded =
+        !!grounding &&
+        mentionsContext(
+          `${grounding.title} ${grounding.description}`,
+          contextTerms(deps.context),
+        );
       if (
         answer.confidence !== 'confident' ||
         !answer.company.trim() ||
