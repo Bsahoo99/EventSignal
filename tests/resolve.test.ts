@@ -259,3 +259,135 @@ test('a context with no usable words adds no requirement', async () => {
   const out = await resolveGuests(guests('Dana Whitaker'), deps);
   assert.equal(out.resolved.length, 1);
 });
+
+test('a company the quote never mentions is not accepted, and the stored url comes from the hit', async () => {
+  const hit = {
+    title: 'Dana Whitaker ran the marathon',
+    url: 'https://example.com/results/dana',
+    description: 'Dana Whitaker ran the San Francisco marathon in 2024.',
+  };
+  const { deps } = makeDeps({
+    search: async () => [hit],
+    completion: async () => ({
+      data: {
+        company: 'Stripe',
+        title: 'Engineer',
+        confidence: 'confident',
+        quote: 'Dana Whitaker ran the San Francisco marathon in 2024.',
+        url: 'https://evil.example/fake',
+      },
+    }),
+  });
+  const out = await resolveGuests(guests('Dana Whitaker'), deps);
+  assert.equal(out.resolved.length, 0);
+  assert.deepEqual(out.dropped, [
+    { name: 'Dana Whitaker', reason: 'no-match' },
+  ]);
+});
+
+test('the evidence url is the url of the hit that was quoted, never the model url', async () => {
+  const { deps } = makeDeps({
+    completion: async () => ({
+      data: {
+        company: 'Acme',
+        title: 'Software Engineer',
+        confidence: 'confident',
+        quote: 'Dana Whitaker is a Software Engineer at Acme',
+        url: 'guest-list',
+      },
+    }),
+  });
+  const out = await resolveGuests(guests('Dana Whitaker'), deps);
+  assert.equal(out.resolved[0].evidence.url, 'https://example.com/in/someone');
+  assert.equal(out.resolved[0].source, 'search');
+});
+
+test('guests resolved from the list carry the guest-list source', async () => {
+  const { deps } = makeDeps();
+  const out = await resolveGuests(
+    guests('Priya Raman - Staff Engineer at Vercel'),
+    deps,
+  );
+  assert.equal(out.resolved[0].source, 'guest-list');
+});
+
+test('a failed search is recorded at one search price, not the full reservation', async () => {
+  const { deps } = makeDeps({
+    search: async () => {
+      throw new Error('search down');
+    },
+  });
+  await resolveGuests(guests('Dana Whitaker\nPat Morgan\nLee Carter'), deps);
+  assert.equal(deps.budget.total(), 0.024);
+});
+
+test('a failed metered model call is recorded at a small bounded charge, not 0.10', async () => {
+  const { deps } = makeDeps({
+    completion: async () => {
+      throw new Error('timeout');
+    },
+  });
+  await resolveGuests(guests('Dana Whitaker'), deps);
+  assert.equal(deps.budget.total(), 0.02);
+});
+
+test('a failed free model call adds nothing beyond the search', async () => {
+  const { deps } = makeDeps({
+    billing: 'free',
+    completion: async () => {
+      throw new Error('ollama down');
+    },
+  });
+  await resolveGuests(guests('Dana Whitaker'), deps);
+  assert.equal(deps.budget.total(), 0.008);
+});
+
+test('very common full names are dropped as ambiguous without a search', async () => {
+  const { deps, calls } = makeDeps();
+  const out = await resolveGuests(
+    guests('John Smith\nAlex Chen\nMaria Garcia'),
+    deps,
+  );
+  assert.deepEqual(
+    out.dropped.map((d) => d.reason),
+    ['ambiguous-name', 'ambiguous-name', 'ambiguous-name'],
+  );
+  assert.equal(calls.search.length, 0);
+});
+
+test('context words that are not plain ASCII still count', async () => {
+  const accepted = makeDeps({
+    context: 'Zürich AI',
+    search: async () => [
+      {
+        title: 'Dana Whitaker - Engineer at Acme',
+        url: 'https://example.com/in/dana',
+        description:
+          'Dana Whitaker is a Software Engineer at Acme, based in Zürich.',
+      },
+    ],
+    completion: confident('Dana Whitaker'),
+  });
+  assert.equal(
+    (await resolveGuests(guests('Dana Whitaker'), accepted.deps)).resolved
+      .length,
+    1,
+  );
+  const rejected = makeDeps({
+    context: 'Zürich AI',
+    search: async () => [
+      {
+        title: 'Dana Whitaker - Engineer at Acme',
+        url: 'https://example.com/in/dana',
+        description:
+          'Dana Whitaker is a Software Engineer at Acme, based in Ohio.',
+      },
+    ],
+    completion: confident('Dana Whitaker'),
+  });
+  assert.equal(
+    (await resolveGuests(guests('Dana Whitaker'), rejected.deps)).resolved
+      .length,
+    0,
+  );
+});

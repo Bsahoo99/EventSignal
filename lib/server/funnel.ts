@@ -107,7 +107,7 @@ export async function researchCompanies(
     try {
       hits = await deps.search(query);
     } catch (error) {
-      deps.budget.settle(id);
+      deps.budget.settleUnknown(id, 8_000);
       throw error;
     }
     deps.budget.settleSearch(id);

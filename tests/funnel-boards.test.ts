@@ -14,6 +14,7 @@ const person = (company: string): Resolved => ({
   name: 'Ada Chen',
   company,
   title: 'Engineer',
+  source: 'guest-list',
   category: 'engineer',
   evidence: { url: 'guest-list', quote: 'q', checkedAt },
 });

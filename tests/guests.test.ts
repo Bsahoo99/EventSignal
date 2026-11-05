@@ -130,3 +130,26 @@ test('the whole synthetic fixture yields exactly its fourteen guests', async () 
   assert.equal(guests.length, 14);
   assert.ok(!guests.some((g) => /2026|Doors open|Guest list/.test(g.line)));
 });
+
+test('a real line that ends with a company suffix period is kept', () => {
+  const { guests, ignored } = parseGuestList(
+    'Jane Doe - Engineer at Acme Inc.',
+  );
+  assert.equal(guests.length, 1);
+  assert.equal(guests[0].company, 'Acme Inc.');
+  assert.equal(ignored, 0);
+});
+
+test('a year inside parentheses in a headline does not make it an event header', () => {
+  const { guests } = parseGuestList('Raj Patel - Founder at Foo (YC 2024)');
+  assert.equal(guests.length, 1);
+  assert.equal(guests[0].company, 'Foo');
+});
+
+test('an event header with a date outside parentheses is still ignored', () => {
+  const { guests, ignored } = parseGuestList(
+    'AI Night - Wednesday, November 12, 2026 (doors 6pm)',
+  );
+  assert.equal(guests.length, 0);
+  assert.equal(ignored, 1);
+});

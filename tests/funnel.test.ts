@@ -16,6 +16,7 @@ const person = (
   name,
   company,
   title,
+  source: 'guest-list',
   category: 'engineer',
   evidence: {
     url: 'guest-list',
@@ -221,4 +222,14 @@ test('a full ledger yields a research-limited lead instead of an exception', asy
   );
   assert.equal(out.leads[0].status, 'research-limited');
   assert.equal(out.leads[0].opening, undefined);
+});
+
+test('a failing company search is recorded at one search price', async () => {
+  const { deps } = makeDeps({
+    search: async () => {
+      throw new Error('search down');
+    },
+  });
+  await researchCompanies([person('A One', 'Acme')], initialProfile, deps);
+  assert.equal(deps.budget.total(), 0.008);
 });

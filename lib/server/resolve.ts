@@ -6,6 +6,7 @@ import type { Completion } from './llm';
 
 export type Resolved = {
   name: string;
+  source: 'guest-list' | 'search';
   company: string;
   title: string;
   category: RoleCategory;
@@ -46,15 +47,41 @@ const squash = (value: string) =>
 // result to mention a word from the event context (its city or topic) so a
 // stranger with the same name in another place or field is not accepted.
 const contextTerms = (context: string) =>
-  [...new Set(context.toLowerCase().split(/[^a-z0-9]+/))].filter(
+  [...new Set(context.toLowerCase().split(/[^\p{L}\p{N}]+/u))].filter(
     (term) => term.length >= 4,
   );
 const mentionsContext = (text: string, terms: string[]) =>
   terms.length === 0 ||
-  terms.some((term) => new RegExp(`\\b${term}\\b`, 'i').test(text));
+  terms.some((term) =>
+    new RegExp(`(?<![\\p{L}\\p{N}])${term}(?![\\p{L}\\p{N}])`, 'iu').test(text),
+  );
+// Full names built only from very common names cannot be told apart by a
+// search, so they are not searched at all.
+const COMMON_FIRST = new Set(
+  'john james robert michael william david richard joseph thomas chris christopher daniel matthew anthony mark steven paul andrew joshua kevin brian george jason ryan eric alex alexander sam samuel ben benjamin mike nick jonathan jennifer mary patricia linda elizabeth barbara susan jessica sarah karen nancy lisa maria anna emily wei li jing ying yan min hui amit rahul raj'.split(
+    ' ',
+  ),
+);
+const COMMON_LAST = new Set(
+  'smith johnson williams brown jones garcia miller davis rodriguez martinez hernandez lopez gonzalez wilson anderson thomas taylor moore jackson martin lee perez thompson white harris sanchez clark ramirez lewis robinson walker young allen king wright scott torres nguyen hill flores green adams nelson baker hall rivera campbell mitchell carter roberts kim chen wang li zhang liu yang huang zhao wu zhou xu sun ma patel singh kumar sharma gupta shah khan'.split(
+    ' ',
+  ),
+);
+const common = (name: string) => {
+  const words = name.toLowerCase().split(/\s+/).filter(Boolean);
+  return (
+    words.length === 2 &&
+    COMMON_FIRST.has(words[0]) &&
+    COMMON_LAST.has(words[1])
+  );
+};
 const searchable = (name: string) => {
   const words = name.split(/\s+/).filter(Boolean);
-  return words.length >= 2 && words.every((word) => word.length >= 2);
+  return (
+    words.length >= 2 &&
+    words.every((word) => word.length >= 2) &&
+    !common(name)
+  );
 };
 
 export async function resolveGuests(
@@ -73,6 +100,7 @@ export async function resolveGuests(
       const title = guest.title ?? '';
       resolved.push({
         name: guest.name,
+        source: 'guest-list',
         company: guest.company,
         title,
         category: categorizeRole(title),
@@ -105,11 +133,15 @@ export async function resolveGuests(
       let hits;
       try {
         hits = await deps.search(`"${guest.name}" ${deps.context}`);
-        deps.budget.settleSearch(reservation);
       } catch {
+        // A failed search cost at most one search. Do not hold 0.10 for it.
+        try {
+          deps.budget.settleUnknown(reservation, 8_000);
+        } catch {}
         drop(guest.name, 'search-failed');
         continue;
       }
+      deps.budget.settleSearch(reservation);
       if (!hits.length) {
         drop(guest.name, 'no-match');
         continue;
@@ -137,11 +169,14 @@ export async function resolveGuests(
           deps.budget.settleFree(completionReservation);
         else deps.budget.settle(completionReservation, response.usage);
       } catch {
-        if (deps.billing === 'free') {
-          try {
+        // Unknown outcome: record a small bounded charge, not the full
+        // reservation. The request is capped at about 3k input tokens and
+        // 4096 output tokens, which is under 0.012.
+        try {
+          if (deps.billing === 'free')
             deps.budget.settleFree(completionReservation);
-          } catch {}
-        }
+          else deps.budget.settleUnknown(completionReservation, 12_000);
+        } catch {}
         drop(guest.name, 'search-failed');
         continue;
       }
@@ -166,18 +201,20 @@ export async function resolveGuests(
         !answer.company.trim() ||
         !quote ||
         !grounded ||
-        !quote.includes(squash(guest.name))
+        !quote.includes(squash(guest.name)) ||
+        !quote.includes(squash(answer.company))
       ) {
         drop(guest.name, 'no-match');
         continue;
       }
       resolved.push({
         name: guest.name,
+        source: 'search',
         company: answer.company.trim(),
         title: answer.title.trim(),
         category: categorizeRole(answer.title),
         evidence: {
-          url: answer.url,
+          url: grounding!.url,
           quote: answer.quote.trim(),
           checkedAt: deps.now(),
         },

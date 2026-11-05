@@ -22,7 +22,7 @@ const DATE =
   /\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b|\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b|\b20\d{2}\b/i;
 const isHeading = (line: string) => /:\s*$/.test(line);
 const isSentence = (line: string) =>
-  /[.!?]$/.test(line) && line.split(/\s+/).length >= 5;
+  !SEPARATOR.test(line) && /[.!?]$/.test(line) && line.split(/\s+/).length >= 5;
 
 function parseHeadline(headline: string): { title?: string; company?: string } {
   const text = headline.trim();
@@ -61,7 +61,7 @@ export function parseGuestList(text: string): {
     const split = line.split(SEPARATOR);
     const name = split[0].trim();
     const headline = split.slice(1).join(' - ');
-    if (DATE.test(headline)) {
+    if (DATE.test(headline.replace(/\([^)]*\)/g, ''))) {
       ignored += 1;
       continue;
     }

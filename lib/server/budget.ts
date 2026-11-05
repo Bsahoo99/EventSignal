@@ -85,6 +85,11 @@ export class Budget {
     // Tavily Basic: one credit at $0.008 PAYG. Never assume account credits.
     return this.record(id, 8_000, true);
   }
+  settleUnknown(id: string, microUsd: number) {
+    // The outcome of a failed call is unknown. Record a bounded charge for it
+    // instead of holding the whole reservation forever.
+    return this.record(id, microUsd, false);
+  }
   settleFree(id: string) {
     // A local model costs nothing. Record a measured zero charge.
     return this.record(id, 0, true);
