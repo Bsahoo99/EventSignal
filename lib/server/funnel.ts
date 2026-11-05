@@ -1,6 +1,11 @@
 import type { Evidence, Opening, Profile, Recommendation } from '../contracts';
 import type { Budget } from './budget';
-import { ResearchLimitError, type Searcher } from './discovery';
+import { ResearchLimitError, type SearchHit, type Searcher } from './discovery';
+import {
+  boardsFromHits,
+  publicBoardFetcher,
+  type BoardFetcher,
+} from './boards';
 import { researchOpenings } from './opportunities';
 import type { Resolved } from './resolve';
 import type { SearchCache } from './search';
@@ -25,6 +30,7 @@ export type FunnelDeps = {
   maxCompanies: number;
   deadlineMs?: number;
   maxReads?: number;
+  boards?: BoardFetcher;
 };
 
 // Guests carry no event topics, so supply generic technology terms plus the
@@ -76,10 +82,17 @@ export async function researchCompanies(
     readCache.set(key, pending);
     return pending;
   };
+  const hitsByCompany = new Map<string, SearchHit[]>();
+  const remember = (query: string, hits: SearchHit[]) => {
+    const company = query.match(/^"([^"]+)"/)?.[1];
+    if (company) hitsByCompany.set(normalize(company), hits);
+    return hits;
+  };
+  const fetchBoard = deps.boards ?? publicBoardFetcher();
   const boundedSearch: Searcher = async (query) => {
     const cacheKey = `tavily:basic:v1:${query}`;
     const stored = deps.searchCache?.get(cacheKey, Date.parse(checkedAt));
-    if (stored) return stored;
+    if (stored) return remember(query, stored);
     if (Date.now() > deadline)
       throw new ResearchLimitError('Research limit reached');
     let id: string;
@@ -97,13 +110,66 @@ export async function researchCompanies(
     }
     deps.budget.settleSearch(id);
     deps.searchCache?.put(cacheKey, hits, Date.parse(checkedAt));
-    return hits;
+    return remember(query, hits);
   };
   const guestPage: SourcePage = {
     url: 'https://guest-list.invalid/',
     text: '',
     links: [],
     jobs: [],
+  };
+
+  // A matching opening on the company's own Ashby, Greenhouse or Lever board
+  // counts as verified. The board slug and the posting's organization (when
+  // the board names one) must both equal the company, and a title must match
+  // one of the owner's roles, the same rule the careers page check uses.
+  const verifyFromBoards = async (lead: CompanyLead) => {
+    const boards = boardsFromHits(
+      lead.company,
+      hitsByCompany.get(normalize(lead.company)) ?? [],
+    );
+    for (const board of boards) {
+      if (Date.now() > deadline) return;
+      let jobs;
+      try {
+        jobs = await fetchBoard(board);
+      } catch {
+        continue;
+      }
+      const match = jobs.find(
+        (job) =>
+          (!job.organization ||
+            normalize(job.organization) === normalize(lead.company)) &&
+          profile.roles.some((role) =>
+            normalize(job.title).includes(normalize(role)),
+          ),
+      );
+      if (!match) continue;
+      lead.evidence = [
+        ...lead.evidence,
+        {
+          id: `board-${normalize(lead.company)}`,
+          kind: 'official-job',
+          title: `${lead.company}: ${match.title}`,
+          excerpt: `The ${board.vendor} job board for ${lead.company} lists ${match.title}.`,
+          entity: lead.company,
+          url: match.url,
+          checkedAt,
+        },
+      ];
+      if (profile.constraints.trim()) {
+        lead.status = 'constraints-unverified';
+        return;
+      }
+      lead.status = 'verified-opening';
+      lead.opening = {
+        title: match.title,
+        url: match.url,
+        checkedAt,
+        location: match.location,
+      };
+      return;
+    }
   };
 
   const leads: CompanyLead[] = [];
@@ -139,7 +205,7 @@ export async function researchCompanies(
       );
       const research = result.recommendation.research;
       const opportunity = result.recommendation.opportunity;
-      leads.push({
+      const lead: CompanyLead = {
         company: group.company,
         people: group.people,
         status: research?.status ?? 'not-researched',
@@ -152,7 +218,13 @@ export async function researchCompanies(
           result.evidence.find((e) => e.kind === 'company-page')?.excerpt ?? '',
         evidence: result.evidence,
         checkedAt,
-      });
+      };
+      if (
+        lead.status !== 'verified-opening' &&
+        lead.status !== 'constraints-unverified'
+      )
+        await verifyFromBoards(lead);
+      leads.push(lead);
     } catch {
       leads.push({
         company: group.company,
