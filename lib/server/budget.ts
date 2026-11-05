@@ -85,6 +85,10 @@ export class Budget {
     // Tavily Basic: one credit at $0.008 PAYG. Never assume account credits.
     return this.record(id, 8_000, true);
   }
+  settleFree(id: string) {
+    // A local model costs nothing. Record a measured zero charge.
+    return this.record(id, 0, true);
+  }
   private record(id: string, charge: number, valid: boolean) {
     const db = this.open();
     try {
