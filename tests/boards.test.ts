@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { SearchHit } from '../lib/server/discovery';
-import { boardsFromHits, publicBoardFetcher } from '../lib/server/boards';
+import {
+  boardsFromHits,
+  guessBoards,
+  publicBoardFetcher,
+} from '../lib/server/boards';
 
 const hit = (url: string): SearchHit => ({ title: 't', url, description: 'd' });
 
@@ -183,4 +187,23 @@ test('an oversized board response is refused', async (t) => {
     () => publicBoardFetcher()({ vendor: 'ashby', slug: 'acme' }),
     /large|oversized/i,
   );
+});
+
+test('guessBoards tries the company name as a slug on all three vendors', () => {
+  assert.deepEqual(guessBoards('Acme'), [
+    { vendor: 'ashby', slug: 'acme' },
+    { vendor: 'greenhouse', slug: 'acme' },
+    { vendor: 'lever', slug: 'acme' },
+  ]);
+});
+
+test('guessBoards tries joined and hyphenated forms of a multi-word name', () => {
+  const slugs = new Set(guessBoards('Scale AI').map((b) => b.slug));
+  assert.deepEqual([...slugs].sort(), ['scale-ai', 'scaleai']);
+  assert.equal(guessBoards('Scale AI').length, 6);
+});
+
+test('guessBoards ignores names that cannot be slugs', () => {
+  assert.deepEqual(guessBoards('!!!'), []);
+  assert.deepEqual(guessBoards('x'.repeat(100)), []);
 });

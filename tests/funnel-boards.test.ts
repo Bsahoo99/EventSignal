@@ -133,17 +133,17 @@ test('a company whose website was not found still verifies from its board', asyn
   assert.equal(out.leads[0].website, undefined);
 });
 
-test('a board whose slug is a different company is ignored', async () => {
-  let called = 0;
+test('a board whose slug is a different company is never used', async () => {
+  const asked: string[] = [];
   const out = await setup({
     hits: [homeHit('acme.com'), boardHit('https://jobs.lever.co/acmeother/1')],
-    boards: async () => {
-      called += 1;
-      return [job('Applied AI Engineer')];
+    boards: async (board) => {
+      asked.push(board.slug);
+      return [];
     },
   }).run();
   assert.equal(out.leads[0].status, 'no-matching-opening');
-  assert.equal(called, 0);
+  assert.ok(!asked.includes('acmeother'), asked.join(','));
 });
 
 test('board jobs whose titles match none of the profile roles change nothing', async () => {
@@ -205,7 +205,34 @@ test('boards are not queried when the careers page already verified an opening',
   assert.equal(called, 0);
 });
 
-test('at most three boards are queried per company', async () => {
+test('with no board links in the search hits, likely board names are probed directly', async () => {
+  const asked: string[] = [];
+  const out = await setup({
+    hits: [homeHit('acme.com')],
+    boards: async (board) => {
+      asked.push(`${board.vendor}:${board.slug}`);
+      if (board.vendor === 'lever') return [job('Applied AI Engineer')];
+      throw new Error('404');
+    },
+  }).run();
+  assert.deepEqual(asked, ['ashby:acme', 'greenhouse:acme', 'lever:acme']);
+  assert.equal(out.leads[0].status, 'verified-opening');
+});
+
+test('boards found in the search hits are tried before guessed ones', async () => {
+  const asked: string[] = [];
+  await setup({
+    hits: [homeHit('acme.com'), boardHit('https://boards.greenhouse.io/acme')],
+    boards: async (board) => {
+      asked.push(`${board.vendor}:${board.slug}`);
+      return [];
+    },
+  }).run();
+  assert.equal(asked[0], 'greenhouse:acme');
+  assert.equal(new Set(asked).size, asked.length);
+});
+
+test('at most six board lookups are made per company', async () => {
   let called = 0;
   await setup({
     hits: [
@@ -213,12 +240,11 @@ test('at most three boards are queried per company', async () => {
       boardHit('https://jobs.lever.co/acme/1'),
       boardHit('https://jobs.ashbyhq.com/acme'),
       boardHit('https://boards.greenhouse.io/acme'),
-      boardHit('https://jobs.eu.lever.co/acme/2'),
     ],
     boards: async () => {
       called += 1;
       return [];
     },
   }).run();
-  assert.ok(called <= 3, `called ${called}`);
+  assert.ok(called <= 6, `called ${called}`);
 });

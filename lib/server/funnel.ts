@@ -3,6 +3,7 @@ import type { Budget } from './budget';
 import { ResearchLimitError, type SearchHit, type Searcher } from './discovery';
 import {
   boardsFromHits,
+  guessBoards,
   publicBoardFetcher,
   type BoardFetcher,
 } from './boards';
@@ -124,10 +125,21 @@ export async function researchCompanies(
   // the board names one) must both equal the company, and a title must match
   // one of the owner's roles, the same rule the careers page check uses.
   const verifyFromBoards = async (lead: CompanyLead) => {
-    const boards = boardsFromHits(
-      lead.company,
-      hitsByCompany.get(normalize(lead.company)) ?? [],
-    );
+    const seen = new Set<string>();
+    const boards = [
+      ...boardsFromHits(
+        lead.company,
+        hitsByCompany.get(normalize(lead.company)) ?? [],
+      ),
+      ...guessBoards(lead.company),
+    ]
+      .filter((board) => {
+        const key = `${board.vendor}:${board.slug.toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 6);
     for (const board of boards) {
       if (Date.now() > deadline) return;
       let jobs;

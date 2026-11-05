@@ -52,6 +52,20 @@ export function boardsFromHits(company: string, hits: SearchHit[]): BoardRef[] {
   return boards;
 }
 
+// The company's own name is the most likely board slug. Probing it costs no
+// search, and a board only counts when its slug equals the company anyway.
+export function guessBoards(company: string): BoardRef[] {
+  const words = company
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  const slugs = [...new Set([words.join(''), words.join('-')])].filter((slug) =>
+    SLUG.test(slug),
+  );
+  const vendors: BoardRef['vendor'][] = ['ashby', 'greenhouse', 'lever'];
+  return slugs.flatMap((slug) => vendors.map((vendor) => ({ vendor, slug })));
+}
+
 const text = z.string().max(500);
 const ashby = z.object({
   jobs: z.array(
