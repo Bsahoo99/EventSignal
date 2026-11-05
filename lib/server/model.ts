@@ -86,6 +86,12 @@ export function geminiExtractor(key: string): Extractor {
         .map((p: { text?: string }) => p.text ?? '')
         .join(''),
     );
+    // One malformed entity (for example a quote shorter than the minimum) must
+    // not discard the valid ones. Dropping an entity only removes evidence.
+    if (Array.isArray(data?.entities))
+      data.entities = data.entities.filter(
+        (entity: unknown) => entitySchema.safeParse(entity).success,
+      );
     const usage = raw.usageMetadata;
     const completeUsage =
       usage &&
