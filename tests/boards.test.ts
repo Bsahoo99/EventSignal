@@ -5,6 +5,7 @@ import {
   boardsFromHits,
   guessBoards,
   publicBoardFetcher,
+  titleMatchesRole,
 } from '../lib/server/boards';
 
 const hit = (url: string): SearchHit => ({ title: 't', url, description: 'd' });
@@ -206,4 +207,55 @@ test('guessBoards tries joined and hyphenated forms of a multi-word name', () =>
 test('guessBoards ignores names that cannot be slugs', () => {
   assert.deepEqual(guessBoards('!!!'), []);
   assert.deepEqual(guessBoards('x'.repeat(100)), []);
+});
+
+const roles = [
+  'Applied AI Engineer',
+  'Forward-Deployed Engineer',
+  'Full Stack AI Engineer',
+];
+
+test('a title matches a role as whole words in order, ignoring case and hyphens', () => {
+  assert.equal(titleMatchesRole('Forward Deployed Engineer', roles), true);
+  assert.equal(titleMatchesRole('forward-deployed engineer', roles), true);
+  assert.equal(
+    titleMatchesRole(
+      'Member of Technical Staff, Applied AI Engineer, Agent Capabilities',
+      roles,
+    ),
+    true,
+  );
+  assert.equal(
+    titleMatchesRole('AI Engineer - FDE (Forward Deployed Engineer)', roles),
+    true,
+  );
+});
+
+test('Engineering is not Engineer and unrelated titles do not match', () => {
+  assert.equal(titleMatchesRole('Forward Deployed Engineering', roles), false);
+  assert.equal(titleMatchesRole('Software Engineer, Platform', roles), false);
+  assert.equal(titleMatchesRole('Account Executive', roles), false);
+});
+
+test('management and intern roles never match an engineer profile', () => {
+  assert.equal(
+    titleMatchesRole('Regional Director, Forward Deployed Engineer', roles),
+    false,
+  );
+  assert.equal(
+    titleMatchesRole('Forward Deployed Engineer Manager', roles),
+    false,
+  );
+  assert.equal(
+    titleMatchesRole('Head of Applied AI Engineer Hiring', roles),
+    false,
+  );
+  assert.equal(titleMatchesRole('Applied AI Engineer Intern', roles), false);
+});
+
+test('a management role matches when the profile asks for one', () => {
+  assert.equal(
+    titleMatchesRole('Engineering Manager, Platform', ['Engineering Manager']),
+    true,
+  );
 });

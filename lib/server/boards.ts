@@ -52,6 +52,33 @@ export function boardsFromHits(company: string, hits: SearchHit[]): BoardRef[] {
   return boards;
 }
 
+const words = (value: string) =>
+  value
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+const MANAGEMENT =
+  /\b(director|manager|head|vp|vice|president|chief|intern|internship)\b/;
+
+// A title matches a role when the role's words appear in it whole and in
+// order ("Engineering" is not "Engineer"). Management and intern titles never
+// match unless the owner's own roles ask for them.
+export function titleMatchesRole(title: string, roles: string[]): boolean {
+  const titleWords = words(title);
+  const wantsManagement = roles.some((role) =>
+    MANAGEMENT.test(role.toLowerCase()),
+  );
+  if (!wantsManagement && titleWords.some((word) => MANAGEMENT.test(word)))
+    return false;
+  return roles.some((role) => {
+    const roleWords = words(role);
+    if (roleWords.length === 0) return false;
+    for (let i = 0; i + roleWords.length <= titleWords.length; i++)
+      if (roleWords.every((word, j) => titleWords[i + j] === word)) return true;
+    return false;
+  });
+}
+
 // The company's own name is the most likely board slug. Probing it costs no
 // search, and a board only counts when its slug equals the company anyway.
 export function guessBoards(company: string): BoardRef[] {

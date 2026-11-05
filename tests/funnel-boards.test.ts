@@ -158,6 +158,17 @@ test('board jobs whose titles match none of the profile roles change nothing', a
   assert.equal(out.leads[0].opening, undefined);
 });
 
+test('a management title that merely contains the role words is not verified', async () => {
+  const out = await setup({
+    hits: [homeHit('acme.com'), boardHit('https://jobs.lever.co/acme/1')],
+    boards: async () => [
+      job('Regional Director, Applied AI Engineer Programs'),
+      job('Forward Deployed Engineering'),
+    ],
+  }).run();
+  assert.equal(out.leads[0].status, 'no-matching-opening');
+});
+
 test('a failing board request leaves the status unchanged and does not throw', async () => {
   const out = await setup({
     hits: [homeHit('acme.com'), boardHit('https://jobs.lever.co/acme/1')],

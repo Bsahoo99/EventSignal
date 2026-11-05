@@ -5,6 +5,7 @@ import {
   boardsFromHits,
   guessBoards,
   publicBoardFetcher,
+  titleMatchesRole,
   type BoardFetcher,
 } from './boards';
 import { researchOpenings } from './opportunities';
@@ -77,7 +78,7 @@ export async function researchCompanies(
     const key = new URL(url).href;
     const cached = readCache.get(key);
     if (cached) return cached;
-    if (reads++ >= (deps.maxReads ?? 200) || Date.now() > deadline)
+    if (reads++ >= (deps.maxReads ?? 400) || Date.now() > deadline)
       throw new ResearchLimitError('Research limit reached');
     const pending = deps.read(url);
     readCache.set(key, pending);
@@ -152,9 +153,7 @@ export async function researchCompanies(
         (job) =>
           (!job.organization ||
             normalize(job.organization) === normalize(lead.company)) &&
-          profile.roles.some((role) =>
-            normalize(job.title).includes(normalize(role)),
-          ),
+          titleMatchesRole(job.title, profile.roles),
       );
       if (!match) continue;
       lead.evidence = [
