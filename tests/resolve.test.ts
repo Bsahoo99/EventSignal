@@ -149,7 +149,7 @@ test('a failing search drops that guest as search-failed', async () => {
 
 test('a full ledger drops the rest as budget and keeps earlier results', async () => {
   class FullBudget extends Budget {
-    reserve(): string {
+    reserve(): ReturnType<Budget['reserve']> {
       throw new Error('Application budget reached.');
     }
   }
