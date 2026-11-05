@@ -63,7 +63,7 @@ export type Recommendation = {
   company: string;
   relationship: string;
   relationshipKind:
-    'speaker' | 'host' | 'presenting-company' | 'hiring-partner';
+    'speaker' | 'host' | 'presenting-company' | 'hiring-partner' | 'attendee';
   eventRole?: string;
   topics?: string[];
   research?: {
