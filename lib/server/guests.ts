@@ -16,6 +16,13 @@ const NOISE = [
   /^presented by\b/i,
 ];
 const SEPARATOR = /\s[-–—|·•]\s/;
+// Pasted pages carry headings and sentences around the names. A date in a
+// headline marks an event title line, never a guest.
+const DATE =
+  /\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b|\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b|\b20\d{2}\b/i;
+const isHeading = (line: string) => /:\s*$/.test(line);
+const isSentence = (line: string) =>
+  /[.!?]$/.test(line) && line.split(/\s+/).length >= 5;
 
 function parseHeadline(headline: string): { title?: string; company?: string } {
   const text = headline.trim();
@@ -43,12 +50,21 @@ export function parseGuestList(text: string): {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
-    if (NOISE.some((pattern) => pattern.test(line))) {
+    if (
+      NOISE.some((pattern) => pattern.test(line)) ||
+      isHeading(line) ||
+      isSentence(line)
+    ) {
       ignored += 1;
       continue;
     }
     const split = line.split(SEPARATOR);
     const name = split[0].trim();
+    const headline = split.slice(1).join(' - ');
+    if (DATE.test(headline)) {
+      ignored += 1;
+      continue;
+    }
     if (name.length < 2 || name.length > 80) {
       ignored += 1;
       continue;
@@ -58,7 +74,7 @@ export function parseGuestList(text: string): {
     seen.add(key);
     guests.push({
       name,
-      ...parseHeadline(split.slice(1).join(' - ')),
+      ...parseHeadline(headline),
       line,
     });
   }

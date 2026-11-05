@@ -79,3 +79,54 @@ test('categorizeRole maps titles to the five categories', () => {
   assert.equal(categorizeRole('Product Designer'), 'other');
   assert.equal(categorizeRole(''), 'other');
 });
+
+test('an event header line with a weekday, date or year in its headline is not a guest', () => {
+  const { guests, ignored } = parseGuestList(
+    'SF Applied AI Builders Night - Wednesday, November 12, 2026, San Francisco',
+  );
+  assert.equal(guests.length, 0);
+  assert.equal(ignored, 1);
+});
+
+test('a line that ends with a colon is a heading, not a guest', () => {
+  const { guests, ignored } = parseGuestList(
+    'Guest list (accepted, 14 of 140 shown):',
+  );
+  assert.equal(guests.length, 0);
+  assert.equal(ignored, 1);
+});
+
+test('a sentence is not a guest', () => {
+  const { guests, ignored } = parseGuestList(
+    'Remote guests may join the livestream. Doors open at 6:00 PM.',
+  );
+  assert.equal(guests.length, 0);
+  assert.equal(ignored, 1);
+});
+
+test('real names with initials or month-like words are kept', () => {
+  const { guests } = parseGuestList(
+    [
+      'J. R. Ward',
+      'Dr. Jane Smith',
+      'April Chen - Engineer at Vercel',
+      'May Wong - Founder, August Labs',
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    guests.map((g) => g.name),
+    ['J. R. Ward', 'Dr. Jane Smith', 'April Chen', 'May Wong'],
+  );
+  assert.equal(guests[3].company, 'August Labs');
+});
+
+test('the whole synthetic fixture yields exactly its fourteen guests', async () => {
+  const { readFileSync } = await import('node:fs');
+  const text = readFileSync(
+    new URL('./fixtures/guest-list-with-header.txt', import.meta.url),
+    'utf8',
+  );
+  const { guests } = parseGuestList(text);
+  assert.equal(guests.length, 14);
+  assert.ok(!guests.some((g) => /2026|Doors open|Guest list/.test(g.line)));
+});
