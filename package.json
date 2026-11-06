@@ -14,7 +14,8 @@
     "test:browser": "playwright test",
     "budget:init": "node --import tsx scripts/init-budget.ts",
     "evaluate": "node --import tsx scripts/evaluate.ts",
-    "dev:owner": "EVENTSIGNAL_MODE=owner next dev --hostname 127.0.0.1"
+    "dev:owner": "EVENTSIGNAL_MODE=owner next dev --hostname 127.0.0.1",
+    "benchmark:openings": "node --import tsx scripts/benchmark-openings.ts"
   },
   "dependencies": {
     "cheerio": "^1.2.0",

@@ -60,8 +60,22 @@ const words = (value: string) =>
 const MANAGEMENT =
   /\b(director|manager|head|vp|vice|president|chief|intern|internship)\b/;
 
-// A title matches a role when the role's words appear in it whole and in
-// order ("Engineering" is not "Engineer"). Management and intern titles never
+// Words that make a title a different job from the role it resembles. They
+// block a match unless the owner's own role names them.
+const OTHER_JOB = /\b(research|scientist|sales|support|marketing)\b/g;
+const GENERIC = new Set(['engineer', 'developer']);
+
+const containsInOrder = (haystack: string[], phrase: string[]) => {
+  for (let i = 0; i + phrase.length <= haystack.length; i++)
+    if (phrase.every((word, j) => haystack[i + j] === word)) return true;
+  return false;
+};
+
+// A title matches a role when the role's distinctive words ("Forward Deployed",
+// "Applied AI") appear in it whole and in order, and the title is an engineer
+// title ("Engineering" is not "Engineer"). Words around them are allowed, so
+// "Forward Deployed AI Engineer" and "Software Engineer, Applied AI" match.
+// Management, intern and research, sales, support or marketing titles never
 // match unless the owner's own roles ask for them.
 export function titleMatchesRole(title: string, roles: string[]): boolean {
   const titleWords = words(title);
@@ -73,9 +87,16 @@ export function titleMatchesRole(title: string, roles: string[]): boolean {
   return roles.some((role) => {
     const roleWords = words(role);
     if (roleWords.length === 0) return false;
-    for (let i = 0; i + roleWords.length <= titleWords.length; i++)
-      if (roleWords.every((word, j) => titleWords[i + j] === word)) return true;
-    return false;
+    const blockers = [...titleWords.join(' ').matchAll(OTHER_JOB)];
+    if (blockers.some((match) => !roleWords.includes(match[1]))) return false;
+    const core = roleWords.filter((word) => !GENERIC.has(word));
+    // A role made only of generic words keeps the strict in-order rule.
+    if (core.length === 0) return containsInOrder(titleWords, roleWords);
+    const needed = roleWords.filter((word) => GENERIC.has(word));
+    return (
+      containsInOrder(titleWords, core) &&
+      needed.every((word) => titleWords.includes(word))
+    );
   });
 }
 

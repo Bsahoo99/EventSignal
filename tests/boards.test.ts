@@ -259,3 +259,47 @@ test('a management role matches when the profile asks for one', () => {
     true,
   );
 });
+
+test('extra words between the role words or a reordered form still match', () => {
+  assert.equal(titleMatchesRole('Forward Deployed AI Engineer', roles), true);
+  assert.equal(
+    titleMatchesRole('Forward Deployed Software Engineer - SF', roles),
+    true,
+  );
+  assert.equal(titleMatchesRole('Software Engineer, Applied AI', roles), true);
+  assert.equal(
+    titleMatchesRole('Frontier Agents Engineer (Applied AI)', roles),
+    true,
+  );
+});
+
+test('the distinctive phrase must still appear whole and be an engineer role', () => {
+  assert.equal(
+    titleMatchesRole('Forward Deployed AI Accelerator', roles),
+    false,
+  );
+  assert.equal(titleMatchesRole('Applied AI Engineering Lead', roles), false);
+  assert.equal(titleMatchesRole('Deployed Forward Engineer', roles), false);
+  assert.equal(titleMatchesRole('Senior Full-Stack Engineer', roles), false);
+  assert.equal(titleMatchesRole('Full Stack AI Engineer', roles), true);
+});
+
+test('research, sales, support and marketing variants are a different job', () => {
+  assert.equal(titleMatchesRole('Applied AI Research Engineer', roles), false);
+  assert.equal(titleMatchesRole('Sales Engineer, Applied AI', roles), false);
+  assert.equal(
+    titleMatchesRole('Customer Support Engineer, Applied AI', roles),
+    false,
+  );
+  assert.equal(
+    titleMatchesRole('Marketing Engineer, Forward Deployed', roles),
+    false,
+  );
+});
+
+test('a profile role that itself names such a job still matches it', () => {
+  assert.equal(
+    titleMatchesRole('Research Engineer, Agents', ['Research Engineer']),
+    true,
+  );
+});
