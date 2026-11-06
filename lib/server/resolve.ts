@@ -39,6 +39,8 @@ const SYSTEM =
   'Answer confident only when one result explicitly ties the full name to a company and a job title. ' +
   'The quote must be copied verbatim from that result and must contain the full name. ' +
   'Use ambiguous when the result could be a different person, and none when nothing ties the name to a company. ' +
+  'The event context (its city and topic) says where and in what field the person is expected to work. ' +
+  'If the result places the named person in a clearly different field or industry, or in a different city than the event context, answer ambiguous. ' +
   'Look only for current employer and job title. Return JSON only.';
 
 const squash = (value: string) =>

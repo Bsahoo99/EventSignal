@@ -391,3 +391,13 @@ test('context words that are not plain ASCII still count', async () => {
     0,
   );
 });
+
+test('the model is told to refuse a person in a clearly different field than the event', async () => {
+  const { deps, calls } = makeDeps();
+  await resolveGuests(guests('Dana Whitaker'), deps);
+  const request = calls.completion[0] as { system: string; user: string };
+  assert.match(request.system, /event context/i);
+  assert.match(request.system, /different (field|industry)/i);
+  assert.match(request.system, /ambiguous/i);
+  assert.ok(request.user.includes('San Francisco AI'));
+});
