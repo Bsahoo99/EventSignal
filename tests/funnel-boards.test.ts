@@ -69,6 +69,7 @@ function setup(options: {
   careersJob?: boolean;
   boards: BoardFetcher;
   profile?: Profile;
+  locations?: string[];
 }) {
   const pages = new Map<string, SourcePage>();
   if (options.withHomepage !== false) {
@@ -89,6 +90,7 @@ function setup(options: {
     budget: createTestDependencies().budget,
     now: () => checkedAt,
     maxCompanies: 10,
+    locations: options.locations,
   };
   return {
     run: () =>
@@ -259,4 +261,121 @@ test('at most six board lookups are made per company', async () => {
     },
   }).run();
   assert.ok(called <= 6, `called ${called}`);
+});
+
+const boardHits = [
+  homeHit('acme.com'),
+  boardHit('https://jobs.lever.co/acme/1'),
+];
+
+test('with wanted locations, a matching title in another city is not verified', async () => {
+  const out = await setup({
+    hits: boardHits,
+    locations: ['Bangalore'],
+    boards: async () => [
+      job('Applied AI Engineer', { location: 'London, UK' }),
+    ],
+  }).run();
+  const lead = out.leads[0];
+  assert.equal(lead.status, 'no-matching-opening');
+  assert.equal(lead.opening, undefined);
+  assert.equal(lead.nearMiss?.reason, 'elsewhere');
+  assert.equal(lead.nearMiss?.title, 'Applied AI Engineer');
+  assert.equal(lead.nearMiss?.location, 'London, UK');
+});
+
+test('with wanted locations, a matching title in a wanted city is verified', async () => {
+  const out = await setup({
+    hits: boardHits,
+    locations: ['Bangalore'],
+    boards: async () => [
+      job('Applied AI Engineer', { location: 'Bengaluru, India' }),
+    ],
+  }).run();
+  assert.equal(out.leads[0].status, 'verified-opening');
+  assert.equal(out.leads[0].opening?.location, 'Bengaluru, India');
+  assert.equal(out.leads[0].nearMiss, undefined);
+});
+
+test('a later job in the wanted city wins over an earlier one elsewhere', async () => {
+  const out = await setup({
+    hits: boardHits,
+    locations: ['Bangalore'],
+    boards: async () => [
+      job('Applied AI Engineer', { location: 'London' }),
+      job('Full Stack AI Engineer', { location: 'Bangalore' }),
+    ],
+  }).run();
+  assert.equal(out.leads[0].status, 'verified-opening');
+  assert.equal(out.leads[0].opening?.title, 'Full Stack AI Engineer');
+});
+
+test('a matching title with no listed location is a near miss, not verified', async () => {
+  const out = await setup({
+    hits: boardHits,
+    locations: ['Bangalore'],
+    boards: async () => [job('Applied AI Engineer')],
+  }).run();
+  assert.equal(out.leads[0].status, 'no-matching-opening');
+  assert.equal(out.leads[0].opening, undefined);
+  assert.equal(out.leads[0].nearMiss?.reason, 'location-unknown');
+});
+
+test('an unknown-location near miss is preferred over an elsewhere one', async () => {
+  const out = await setup({
+    hits: boardHits,
+    locations: ['Bangalore'],
+    boards: async () => [
+      job('Applied AI Engineer', { location: 'London' }),
+      job('Full Stack AI Engineer'),
+    ],
+  }).run();
+  assert.equal(out.leads[0].nearMiss?.reason, 'location-unknown');
+  assert.equal(out.leads[0].nearMiss?.title, 'Full Stack AI Engineer');
+});
+
+test('with no wanted locations a job anywhere still verifies and no near miss is set', async () => {
+  const out = await setup({
+    hits: boardHits,
+    boards: async () => [
+      job('Applied AI Engineer', { location: 'London, UK' }),
+    ],
+  }).run();
+  assert.equal(out.leads[0].status, 'verified-opening');
+  assert.equal(out.leads[0].nearMiss, undefined);
+});
+
+test('a careers-page opening with no location is not verified when locations are wanted', async () => {
+  const out = await setup({
+    hits: boardHits,
+    careersJob: true,
+    locations: ['Bangalore'],
+    boards: async () => [],
+  }).run();
+  assert.equal(out.leads[0].status, 'no-matching-opening');
+  assert.equal(out.leads[0].opening, undefined);
+  assert.equal(out.leads[0].nearMiss?.reason, 'location-unknown');
+});
+
+test('boards are still checked when a careers-page opening fails the location check', async () => {
+  const out = await setup({
+    hits: boardHits,
+    careersJob: true,
+    locations: ['Bangalore'],
+    boards: async () => [job('Applied AI Engineer', { location: 'Bangalore' })],
+  }).run();
+  assert.equal(out.leads[0].status, 'verified-opening');
+  assert.equal(out.leads[0].opening?.location, 'Bangalore');
+  assert.equal(out.leads[0].nearMiss, undefined);
+});
+
+test('hard constraints still stop a location match from being verified', async () => {
+  const out = await setup({
+    hits: boardHits,
+    locations: ['Bangalore'],
+    boards: async () => [job('Applied AI Engineer', { location: 'Bangalore' })],
+    profile: { ...initialProfile, constraints: 'Must pay above a floor' },
+  }).run();
+  assert.equal(out.leads[0].status, 'constraints-unverified');
+  assert.equal(out.leads[0].opening, undefined);
 });

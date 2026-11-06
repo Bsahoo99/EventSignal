@@ -7,18 +7,30 @@ import {
   publicBoardFetcher,
   titleMatchesRole,
   type BoardFetcher,
+  type BoardJob,
+  type BoardRef,
 } from './boards';
+import { locationVerdict } from './location';
 import { researchOpenings } from './opportunities';
 import type { Resolved } from './resolve';
 import type { SearchCache } from './search';
 import type { PageReader, SourcePage } from './sources';
 
+// A posting whose title matches the owner's roles but whose location is not a
+// wanted one, or is not listed. It is shown as context and never as verified.
+export type NearMiss = {
+  title: string;
+  url: string;
+  location?: string;
+  reason: 'elsewhere' | 'location-unknown';
+};
 export type CompanyLead = {
   company: string;
   people: Resolved[];
   status: NonNullable<Recommendation['research']>['status'] | 'not-researched';
   website?: string;
   opening?: Opening;
+  nearMiss?: NearMiss;
   description: string;
   evidence: Evidence[];
   checkedAt: string;
@@ -33,6 +45,8 @@ export type FunnelDeps = {
   deadlineMs?: number;
   maxReads?: number;
   boards?: BoardFetcher;
+  // Cities (and "remote") the owner wants. Empty or missing means any location.
+  locations?: string[];
 };
 
 // Guests carry no event topics, so supply generic technology terms plus the
@@ -121,6 +135,28 @@ export async function researchCompanies(
     jobs: [],
   };
 
+  const wanted = (deps.locations ?? []).map((l) => l.trim()).filter(Boolean);
+  // Keep one near miss per company. A job with no listed location is kept in
+  // preference to one in another place, since it may still be in a wanted one.
+  const noteNearMiss = (
+    lead: CompanyLead,
+    job: { title: string; url: string; location?: string },
+    verdict: 'elsewhere' | 'unknown',
+  ) => {
+    const reason = verdict === 'unknown' ? 'location-unknown' : 'elsewhere';
+    if (
+      lead.nearMiss &&
+      !(lead.nearMiss.reason === 'elsewhere' && reason === 'location-unknown')
+    )
+      return;
+    lead.nearMiss = {
+      title: job.title,
+      url: job.url,
+      location: job.location,
+      reason,
+    };
+  };
+
   // A matching opening on the company's own Ashby, Greenhouse or Lever board
   // counts as verified. The board slug and the posting's organization (when
   // the board names one) must both equal the company, and a title must match
@@ -141,21 +177,35 @@ export async function researchCompanies(
         return true;
       })
       .slice(0, 6);
-    for (const board of boards) {
-      if (Date.now() > deadline) return;
+    let match: BoardJob | undefined;
+    let board: BoardRef | undefined;
+    for (const candidate of boards) {
+      if (Date.now() > deadline) break;
       let jobs;
       try {
-        jobs = await fetchBoard(board);
+        jobs = await fetchBoard(candidate);
       } catch {
         continue;
       }
-      const match = jobs.find(
-        (job) =>
-          (!job.organization ||
-            normalize(job.organization) === normalize(lead.company)) &&
-          titleMatchesRole(job.title, profile.roles),
-      );
-      if (!match) continue;
+      for (const job of jobs) {
+        if (
+          (job.organization &&
+            normalize(job.organization) !== normalize(lead.company)) ||
+          !titleMatchesRole(job.title, profile.roles)
+        )
+          continue;
+        const verdict = locationVerdict(job.location, wanted);
+        if (verdict === 'match') {
+          match = job;
+          board = candidate;
+          break;
+        }
+        noteNearMiss(lead, job, verdict);
+      }
+      if (match) break;
+    }
+    if (match && board) {
+      lead.nearMiss = undefined;
       lead.evidence = [
         ...lead.evidence,
         {
@@ -179,7 +229,6 @@ export async function researchCompanies(
         checkedAt,
         location: match.location,
       };
-      return;
     }
   };
 
@@ -230,6 +279,15 @@ export async function researchCompanies(
         evidence: result.evidence,
         checkedAt,
       };
+      // An opening from the careers page also has to be in a wanted place.
+      if (wanted.length && lead.status === 'verified-opening' && lead.opening) {
+        const verdict = locationVerdict(lead.opening.location, wanted);
+        if (verdict !== 'match') {
+          noteNearMiss(lead, lead.opening, verdict);
+          lead.opening = undefined;
+          lead.status = 'no-matching-opening';
+        }
+      }
       if (
         lead.status !== 'verified-opening' &&
         lead.status !== 'constraints-unverified'
