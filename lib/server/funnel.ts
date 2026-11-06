@@ -88,12 +88,19 @@ export async function researchCompanies(
   const deadline = Date.now() + (deps.deadlineMs ?? 110_000);
   let reads = 0;
   const readCache = new Map<string, Promise<SourcePage>>();
+  // Counts stops caused by the run's own limits (time, page reads, budget), as
+  // opposed to a single company's pages being too many to read.
+  let limitStops = 0;
+  const stop = (message: string): never => {
+    limitStops += 1;
+    throw new ResearchLimitError(message);
+  };
   const boundedRead: PageReader = async (url) => {
     const key = new URL(url).href;
     const cached = readCache.get(key);
     if (cached) return cached;
     if (reads++ >= (deps.maxReads ?? 400) || Date.now() > deadline)
-      throw new ResearchLimitError('Research limit reached');
+      return stop('Research limit reached');
     const pending = deps.read(url);
     readCache.set(key, pending);
     return pending;
@@ -109,13 +116,12 @@ export async function researchCompanies(
     const cacheKey = `tavily:basic:v1:${query}`;
     const stored = deps.searchCache?.get(cacheKey, Date.parse(checkedAt));
     if (stored) return remember(query, stored);
-    if (Date.now() > deadline)
-      throw new ResearchLimitError('Research limit reached');
+    if (Date.now() > deadline) return stop('Research limit reached');
     let id: string;
     try {
       id = deps.budget.reserve();
     } catch {
-      throw new ResearchLimitError('Budget limit reached');
+      return stop('Budget limit reached');
     }
     let hits;
     try {
@@ -179,6 +185,7 @@ export async function researchCompanies(
       .slice(0, 6);
     let match: BoardJob | undefined;
     let board: BoardRef | undefined;
+    let boardRead = false;
     for (const candidate of boards) {
       if (Date.now() > deadline) break;
       let jobs;
@@ -187,6 +194,7 @@ export async function researchCompanies(
       } catch {
         continue;
       }
+      boardRead = true;
       for (const job of jobs) {
         if (
           (job.organization &&
@@ -229,6 +237,14 @@ export async function researchCompanies(
         checkedAt,
         location: match.location,
       };
+    } else if (
+      boardRead &&
+      (lead.status === 'research-limited' ||
+        lead.status === 'careers-unreadable')
+    ) {
+      // The company's own job board was read in full and holds no matching
+      // role, which settles what the unreadable careers page could not.
+      lead.status = 'no-matching-opening';
     }
   };
 
@@ -254,6 +270,7 @@ export async function researchCompanies(
       questions: ['', '', ''],
       evidence: [],
     };
+    const stopsBefore = limitStops;
     try {
       const result = await researchOpenings(
         rec,
@@ -288,6 +305,11 @@ export async function researchCompanies(
           lead.status = 'no-matching-opening';
         }
       }
+      // A careers page with too many postings to read stops research too, but
+      // retrying cannot help. Only a stop caused by the run's own limits is
+      // reported as research-limited.
+      if (lead.status === 'research-limited' && limitStops === stopsBefore)
+        lead.status = 'careers-unreadable';
       if (
         lead.status !== 'verified-opening' &&
         lead.status !== 'constraints-unverified'

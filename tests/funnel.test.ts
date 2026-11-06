@@ -233,3 +233,39 @@ test('a failing company search is recorded at one search price', async () => {
   await researchCompanies([person('A One', 'Acme')], initialProfile, deps);
   assert.equal(deps.budget.total(), 0.008);
 });
+
+test('links to other parts of the same careers page do not use up the page limit', async () => {
+  const pages = new Map<string, SourcePage>();
+  pages.set('https://acme.com/', home('Acme', 'acme.com'));
+  pages.set('https://acme.com/careers', {
+    url: 'https://acme.com/careers',
+    text: 'Acme careers.',
+    links: [
+      {
+        label: 'Skip to content',
+        url: 'https://acme.com/careers#main-content',
+      },
+      { label: 'Search jobs', url: 'https://acme.com/careers#search' },
+      { label: 'All jobs', url: 'https://acme.com/careers#jobs' },
+      { label: 'Open positions', url: 'https://acme.com/careers/openings' },
+    ],
+    jobs: [],
+  });
+  pages.set(
+    'https://acme.com/careers/openings',
+    careers('Acme', 'acme.com', true),
+  );
+  const { deps } = makeDeps({
+    read: async (url) => {
+      const page = pages.get(url);
+      if (!page) throw new Error(`unreadable ${url}`);
+      return page;
+    },
+  });
+  const out = await researchCompanies(
+    [person('Ada Chen', 'Acme')],
+    initialProfile,
+    deps,
+  );
+  assert.equal(out.leads[0].status, 'verified-opening');
+});

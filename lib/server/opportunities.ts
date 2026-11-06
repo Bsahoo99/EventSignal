@@ -117,8 +117,19 @@ export async function researchOpenings(
         url: home.url,
         checkedAt,
       });
+    // A link to another part of a page already read (#main-content, #search)
+    // is the same page, so it must not use up the page limit.
+    const withoutFragment = (value: string) => {
+      try {
+        const url = new URL(value);
+        url.hash = '';
+        return url.href;
+      } catch {
+        return value;
+      }
+    };
     const pages = [home];
-    const visited = new Set([home.url]);
+    const visited = new Set([withoutFragment(home.url)]);
     let incomplete = false;
     let limited = false;
     for (let index = 0; index < pages.length; index++) {
@@ -126,14 +137,15 @@ export async function researchOpenings(
         trustedCareerLink(l, host(home.url)),
       );
       for (const career of careers) {
-        if (visited.has(career.url)) continue;
+        const target = withoutFragment(career.url);
+        if (visited.has(target)) continue;
         if (visited.size >= 4 || limited) {
           limited = true;
           continue;
         }
-        visited.add(career.url);
+        visited.add(target);
         try {
-          const page = await read(career.url);
+          const page = await read(target);
           if (host(page.url) !== host(career.url))
             throw new Error(
               'Careers source redirected outside the established source domain.',

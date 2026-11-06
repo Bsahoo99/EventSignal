@@ -70,14 +70,19 @@ function setup(options: {
   boards: BoardFetcher;
   profile?: Profile;
   locations?: string[];
+  // Extra links on the careers page, one per individual posting.
+  postingLinks?: number;
 }) {
   const pages = new Map<string, SourcePage>();
   if (options.withHomepage !== false) {
     pages.set('https://acme.com/', home('Acme', 'acme.com'));
-    pages.set(
-      'https://acme.com/careers',
-      careers('Acme', 'acme.com', !!options.careersJob),
-    );
+    pages.set('https://acme.com/careers', {
+      ...careers('Acme', 'acme.com', !!options.careersJob),
+      links: Array.from({ length: options.postingLinks ?? 0 }, (_, i) => ({
+        label: `Open role ${i}`,
+        url: `https://acme.com/careers/openings/role-${i}`,
+      })),
+    });
   }
   const deps: FunnelDeps = {
     read: async (url) => {
@@ -378,4 +383,34 @@ test('hard constraints still stop a location match from being verified', async (
   }).run();
   assert.equal(out.leads[0].status, 'constraints-unverified');
   assert.equal(out.leads[0].opening, undefined);
+});
+
+test('a careers page with more postings than can be read is not reported as a time limit', async () => {
+  const out = await setup({
+    hits: [homeHit('acme.com')],
+    postingLinks: 12,
+    boards: async () => {
+      throw new Error('no board');
+    },
+  }).run();
+  assert.equal(out.leads[0].status, 'careers-unreadable');
+  assert.equal(out.leads[0].opening, undefined);
+});
+
+test('a job board that was read in full settles a careers page that is too large', async () => {
+  const out = await setup({
+    hits: [homeHit('acme.com'), boardHit('https://jobs.lever.co/acme/1')],
+    postingLinks: 12,
+    boards: async () => [job('Account Executive')],
+  }).run();
+  assert.equal(out.leads[0].status, 'no-matching-opening');
+});
+
+test('a matching board job still verifies a company whose careers page is too large', async () => {
+  const out = await setup({
+    hits: [homeHit('acme.com'), boardHit('https://jobs.lever.co/acme/1')],
+    postingLinks: 12,
+    boards: async () => [job('Forward Deployed Engineer')],
+  }).run();
+  assert.equal(out.leads[0].status, 'verified-opening');
 });
