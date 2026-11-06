@@ -58,3 +58,33 @@ test('remote in a wanted city matches even without listing remote', () => {
     'match',
   );
 });
+
+test('Bay Area as a wanted place covers the cities around San Francisco', () => {
+  assert.equal(locationVerdict('Palo Alto, CA', ['Bay Area']), 'match');
+  assert.equal(locationVerdict('Foster City, CA', ['Bay Area']), 'match');
+  assert.equal(locationVerdict('San Francisco', ['bay area']), 'match');
+  assert.equal(locationVerdict('New York', ['Bay Area']), 'elsewhere');
+});
+
+test('wanting San Francisco alone does not cover the whole Bay Area', () => {
+  assert.equal(
+    locationVerdict('Palo Alto, CA', ['San Francisco']),
+    'elsewhere',
+  );
+});
+
+test('a location that names no place is unknown, not elsewhere', () => {
+  assert.equal(locationVerdict('Hybrid', ['San Francisco']), 'unknown');
+  assert.equal(locationVerdict('In-Office', ['San Francisco']), 'unknown');
+  assert.equal(locationVerdict('Distributed', ['San Francisco']), 'unknown');
+  assert.equal(locationVerdict('North America', ['San Francisco']), 'unknown');
+  assert.equal(locationVerdict('United States', ['San Francisco']), 'unknown');
+});
+
+test('a place outside the wanted ones stays elsewhere', () => {
+  assert.equal(
+    locationVerdict('Hybrid - London', ['San Francisco']),
+    'elsewhere',
+  );
+  assert.equal(locationVerdict('Europe', ['San Francisco']), 'elsewhere');
+});

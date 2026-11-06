@@ -20,6 +20,52 @@ const ALIASES: string[][] = [
   ['mumbai', 'bombay'],
   ['gurgaon', 'gurugram'],
 ];
+// "Bay Area" stands for the cities around San Francisco. Listing San
+// Francisco alone does not widen to them.
+const BAY_AREA = [
+  'bay area',
+  'san francisco',
+  'sf',
+  'south san francisco',
+  'oakland',
+  'berkeley',
+  'emeryville',
+  'palo alto',
+  'menlo park',
+  'mountain view',
+  'sunnyvale',
+  'santa clara',
+  'cupertino',
+  'redwood city',
+  'san mateo',
+  'foster city',
+  'burlingame',
+  'san jose',
+  'los gatos',
+  'fremont',
+];
+// Words that say how or roughly where, never which city. A location made only
+// of these cannot be compared with a city, so it is unknown.
+const NO_PLACE = new Set([
+  'hybrid',
+  'onsite',
+  'on',
+  'site',
+  'in',
+  'office',
+  'distributed',
+  'flexible',
+  'north',
+  'america',
+  'americas',
+  'amer',
+  'united',
+  'states',
+  'us',
+  'usa',
+  'global',
+  'worldwide',
+]);
 const REMOTE_FILLER = new Set([
   'remote',
   'fully',
@@ -54,6 +100,7 @@ export function locationVerdict(
     .filter((w) => !tokens(w).includes('remote'))
     .flatMap((w) => {
       const text = tokens(w).join(' ');
+      if (text === 'bay area') return BAY_AREA.map((name) => name.split(' '));
       const group = ALIASES.find((names) => names.includes(text));
       return (group ?? [text]).map((name) => name.split(' '));
     });
@@ -61,5 +108,6 @@ export function locationVerdict(
 
   if (words.includes('remote') && wantsRemote)
     return words.every((word) => REMOTE_FILLER.has(word)) ? 'match' : 'unknown';
+  if (words.every((word) => NO_PLACE.has(word))) return 'unknown';
   return 'elsewhere';
 }
