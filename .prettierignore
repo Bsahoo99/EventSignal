@@ -7,3 +7,4 @@ README.md
 playwright-report
 test-results
 benchmarks/boards-*.json
+next-env.d.ts
