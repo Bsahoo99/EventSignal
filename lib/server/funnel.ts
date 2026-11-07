@@ -10,7 +10,8 @@ import {
   type BoardJob,
   type BoardRef,
 } from './boards';
-import { locationVerdict } from './location';
+import { locationVerdict, type LocationVerdict } from './location';
+import { listingsFromHtml, type Renderer } from './render';
 import { researchOpenings } from './opportunities';
 import type { Resolved } from './resolve';
 import type { SearchCache } from './search';
@@ -47,6 +48,11 @@ export type FunnelDeps = {
   boards?: BoardFetcher;
   // Cities (and "remote") the owner wants. Empty or missing means any location.
   locations?: string[];
+  // Reads careers pages that build their job list with a script. Optional.
+  render?: Renderer;
+  // Official websites the owner supplied, by company name.
+  websites?: Record<string, string>;
+  maxRenders?: number;
 };
 
 // Guests carry no event topics, so supply generic technology terms plus the
@@ -248,6 +254,94 @@ export async function researchCompanies(
     }
   };
 
+  // A role listed on the company's own careers page, read the way a browser
+  // shows it. Same title and place rules as the job board check. At most two
+  // pages per company and a capped number per run.
+  const websiteHints = new Map(
+    Object.entries(deps.websites ?? {}).map(([name, url]) => [
+      normalize(name),
+      url,
+    ]),
+  );
+  let renders = 0;
+  const bestVerdict = (details: string[]): LocationVerdict => {
+    if (wanted.length === 0) return 'match';
+    const verdicts = details.map((d) => locationVerdict(d, wanted));
+    return verdicts.includes('match')
+      ? 'match'
+      : verdicts.includes('unknown') || verdicts.length === 0
+        ? 'unknown'
+        : 'elsewhere';
+  };
+  const verifyFromRendered = async (lead: CompanyLead) => {
+    const base = lead.website ?? websiteHints.get(normalize(lead.company));
+    if (!deps.render || !base) return;
+    let origin: URL;
+    try {
+      origin = new URL(base);
+    } catch {
+      return;
+    }
+    if (origin.protocol !== 'https:') return;
+    let listingsSeen = 0;
+    for (const path of ['/careers', '/jobs']) {
+      if (Date.now() > deadline || renders >= (deps.maxRenders ?? 12)) break;
+      renders += 1;
+      let rendered;
+      try {
+        rendered = await deps.render(`${origin.origin}${path}`);
+      } catch {
+        continue;
+      }
+      const listings = listingsFromHtml(rendered.html, rendered.url);
+      listingsSeen += listings.length;
+      for (const listing of listings) {
+        if (!titleMatchesRole(listing.title, profile.roles)) continue;
+        const verdict = bestVerdict(listing.details);
+        const location =
+          listing.details.find((d) => locationVerdict(d, wanted) === 'match') ??
+          (listing.details.join(', ') || undefined);
+        if (verdict !== 'match') {
+          noteNearMiss(lead, { ...listing, location }, verdict);
+          continue;
+        }
+        lead.nearMiss = undefined;
+        lead.evidence = [
+          ...lead.evidence,
+          {
+            id: `render-${normalize(lead.company)}`,
+            kind: 'official-job',
+            title: `${lead.company}: ${listing.title}`,
+            excerpt: `The rendered careers page for ${lead.company} lists ${listing.title}${location ? ` (${location})` : ''}.`,
+            entity: lead.company,
+            url: listing.url,
+            checkedAt,
+          },
+        ];
+        if (profile.constraints.trim()) {
+          lead.status = 'constraints-unverified';
+          return;
+        }
+        lead.status = 'verified-opening';
+        lead.opening = {
+          title: listing.title,
+          url: listing.url,
+          checkedAt,
+          location,
+        };
+        return;
+      }
+      if (listings.length) break;
+    }
+    if (
+      listingsSeen > 0 &&
+      (lead.status === 'research-limited' ||
+        lead.status === 'careers-unreadable' ||
+        lead.status === 'site-unreadable')
+    )
+      lead.status = 'no-matching-opening';
+  };
+
   const leads: CompanyLead[] = [];
   for (const [index, group] of chosen.entries()) {
     if (Date.now() > deadline) {
@@ -315,6 +409,11 @@ export async function researchCompanies(
         lead.status !== 'constraints-unverified'
       )
         await verifyFromBoards(lead);
+      if (
+        lead.status !== 'verified-opening' &&
+        lead.status !== 'constraints-unverified'
+      )
+        await verifyFromRendered(lead);
       leads.push(lead);
     } catch {
       leads.push({
