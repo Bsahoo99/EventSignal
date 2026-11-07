@@ -83,11 +83,42 @@ export function listingsFromHtml(html: string, pageUrl: string): Listing[] {
   return listings;
 }
 
-// Renders one public https page in a headless browser. Returns undefined when
-// the browser library is not installed. Every request the page makes must go
-// to a public address, images and fonts are not loaded, and the final address
-// must stay on the requested site.
-export async function playwrightRenderer(): Promise<Renderer | undefined> {
+// Which addresses the browser may reach. The default allows only public
+// https hosts. Tests pass a policy for a local server.
+export type NetworkPolicy = {
+  start(raw: string): URL;
+  allows(url: URL): Promise<boolean>;
+};
+export const publicHttpsPolicy: NetworkPolicy = {
+  start: (raw) => validateDestination(raw),
+  allows: async (url) =>
+    url.protocol === 'https:' &&
+    (await resolveDestination(url.href).then(
+      () => true,
+      () => false,
+    )),
+};
+const MAX_HOPS = 3;
+const MAX_BODY = 5_000_000;
+const bare = (host: string) => host.replace(/^www\./, '');
+
+// Renders one public page in a headless browser. Returns undefined when the
+// browser library is not installed.
+//
+// The browser's own redirect handling is not trusted: Playwright's request
+// hook does not see redirect hops. So every request is fetched by this code,
+// one hop at a time, and each address is checked against the policy before it
+// is requested. Images, media and fonts are not loaded, WebSockets are closed,
+// a navigation of the page itself may not leave the requested site, and the
+// final address must stay on that site.
+//
+// Residual risk: an address is checked just before it is fetched, so a host
+// that changes its DNS answer between the check and the fetch is not caught.
+// For a hosted deployment run this behind an egress proxy or a sandbox.
+export async function playwrightRenderer(
+  options: { policy?: NetworkPolicy } = {},
+): Promise<Renderer | undefined> {
+  const policy = options.policy ?? publicHttpsPolicy;
   let chromium: typeof import('@playwright/test').chromium;
   try {
     ({ chromium } = await import('@playwright/test'));
@@ -95,8 +126,9 @@ export async function playwrightRenderer(): Promise<Renderer | undefined> {
     return undefined;
   }
   return async (raw) => {
-    const start = validateDestination(raw);
-    await resolveDestination(start.href);
+    const start = policy.start(raw);
+    if (!(await policy.allows(start)))
+      throw new Error('That address is not allowed.');
     const browser = await chromium.launch({ headless: true });
     try {
       const context = await browser.newContext({
@@ -104,30 +136,43 @@ export async function playwrightRenderer(): Promise<Renderer | undefined> {
         serviceWorkers: 'block',
         permissions: [],
       });
-      const hostChecks = new Map<string, Promise<boolean>>();
-      const publicHost = (url: URL) => {
-        let check = hostChecks.get(url.hostname);
-        if (!check) {
-          check = resolveDestination(url.href).then(
-            () => true,
-            () => false,
-          );
-          hostChecks.set(url.hostname, check);
-        }
-        return check;
-      };
+      await context.routeWebSocket(/.*/, (socket) => {
+        void socket.close();
+      });
       await context.route('**/*', async (route) => {
         const request = route.request();
         if (['image', 'media', 'font'].includes(request.resourceType()))
           return route.abort();
         try {
-          const url = new URL(request.url());
-          if (url.protocol !== 'https:' || !(await publicHost(url)))
-            return route.abort();
+          let current = new URL(request.url());
+          for (let hop = 0; hop <= MAX_HOPS; hop++) {
+            if (!(await policy.allows(current))) return route.abort();
+            const response = await route.fetch({
+              url: current.href,
+              maxRedirects: 0,
+              timeout: 15_000,
+            });
+            const location = response.headers()['location'];
+            if (
+              response.status() >= 300 &&
+              response.status() < 400 &&
+              location
+            ) {
+              current = new URL(location, current);
+              continue;
+            }
+            const body = await response.body();
+            if (body.length > MAX_BODY) return route.abort();
+            const pageItself =
+              request.isNavigationRequest() && !request.frame().parentFrame();
+            if (pageItself && bare(current.hostname) !== bare(start.hostname))
+              return route.abort();
+            return route.fulfill({ response, body });
+          }
+          return route.abort();
         } catch {
           return route.abort();
         }
-        return route.continue();
       });
       const page = await context.newPage();
       await page.goto(start.href, {
@@ -148,11 +193,7 @@ export async function playwrightRenderer(): Promise<Renderer | undefined> {
         )
         .catch(() => {});
       const final = new URL(page.url());
-      const bare = (host: string) => host.replace(/^www\./, '');
-      if (
-        final.protocol !== 'https:' ||
-        bare(final.hostname) !== bare(start.hostname)
-      )
+      if (bare(final.hostname) !== bare(start.hostname))
         throw new Error('The rendered page left the requested site.');
       const html = await page.content();
       if (html.length > 3_000_000)
