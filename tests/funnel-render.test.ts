@@ -222,3 +222,13 @@ test('with no wanted places a matching rendered role anywhere is verified', asyn
   })();
   assert.equal(out.leads[0].status, 'verified-opening');
 });
+
+test('a supplied website that was read but lists no matching role is no longer site not found', async () => {
+  const out = await setup({
+    findSite: false,
+    websites: { Acme: 'https://acme.com/' },
+    render: rendering(html(listing('Account Executive', 'Sales', 'London'))),
+  })();
+  assert.equal(out.leads[0].status, 'no-matching-opening');
+  assert.equal(out.leads[0].website, 'https://acme.com/');
+});

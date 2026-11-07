@@ -333,13 +333,22 @@ export async function researchCompanies(
       }
       if (listings.length) break;
     }
+    // A page that listed roles settles an unreadable one. A website the owner
+    // supplied also settles "site not found" or "ambiguous", since it names
+    // the site.
+    const supplied = !lead.website;
     if (
       listingsSeen > 0 &&
       (lead.status === 'research-limited' ||
         lead.status === 'careers-unreadable' ||
-        lead.status === 'site-unreadable')
-    )
+        lead.status === 'site-unreadable' ||
+        (supplied &&
+          (lead.status === 'site-not-found' ||
+            lead.status === 'site-ambiguous')))
+    ) {
       lead.status = 'no-matching-opening';
+      lead.website = lead.website ?? origin.href;
+    }
   };
 
   const leads: CompanyLead[] = [];
